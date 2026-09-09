@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PizzaApp.Api.Data;
 using PizzaApp.Api.Models;
 
 namespace PizzaApp.Api.Controllers
@@ -8,12 +10,56 @@ namespace PizzaApp.Api.Controllers
     [Route("api/[controller]")]
     public class OrdersController : ControllerBase
     {
-        [HttpGet]
-        public ActionResult<IEnumerable<PizzaOrder>> GetOrders()
+        private readonly PizzaDbContext _context;
+
+        public OrdersController(PizzaDbContext context)
         {
-            var orders = new List<PizzaOrder>();
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<PizzaOrder>>> GetOrdersAsync()
+        {
+            var orders = await _context.Orders.ToListAsync();
 
             return Ok(orders);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<PizzaOrder>> GetOrderByIdAsync(int id)
+        {
+            var order = await _context.Orders.FindAsync(id);
+
+            if (order == null)
+            {
+                return NotFound($"Beställning med ID {id} hittades inte.");
+            }
+
+            return Ok(order);
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<PizzaOrder>> CreateOrderAsync(PizzaOrder order)
+        {
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction(nameof(GetOrderByIdAsync), new { id = order.Id }, order);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteOrderAsync(int id)
+        {
+            var order = await _context.Orders.FindAsync(id);
+
+            if (order == null)
+            {
+                return NotFound($"Beställning med ID {id} hittades inte.");
+            }
+
+            _context.Orders.Remove(order);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }

@@ -4,3 +4,14 @@ GET {{PizzaApp.Api_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+@PizzaApp.Api_HostAddress = https://localhost:7113
+
+POST {{PizzaApp.Api_HostAddress}}/api/orders
+Content-Type: application/json
+
+{
+  "name": "Christoffer",
+  "pizza": "Kebabpizza",
+  "comment": "Extra sås"
+}

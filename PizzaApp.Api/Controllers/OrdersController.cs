@@ -20,7 +20,9 @@ namespace PizzaApp.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PizzaOrder>>> GetOrdersAsync()
         {
-            var orders = await _context.Orders.ToListAsync();
+            var orders = await _context.Orders
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
 
             return Ok(orders);
         }
@@ -41,9 +43,17 @@ namespace PizzaApp.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<PizzaOrder>> CreateOrderAsync(PizzaOrder order)
         {
+            order.CreatedAt = DateTime.UtcNow;
+            
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetOrderByIdAsync), new { id = order.Id }, order);
+
+            return Ok(order);
+           /* return CreatedAtAction(
+                nameof(GetOrderByIdAsync), 
+                new { id = order.Id }, 
+                order);
+           */
         }
 
         [HttpDelete("{id}")]

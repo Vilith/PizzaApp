@@ -27,7 +27,7 @@ namespace PizzaApp.Api.Controllers
             return Ok(orders);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id}", Name = "GetOrderById")]
         public async Task<ActionResult<PizzaOrder>> GetOrderByIdAsync(int id)
         {
             var order = await _context.Orders.FindAsync(id);
@@ -48,12 +48,16 @@ namespace PizzaApp.Api.Controllers
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
 
-            return Ok(order);
+            //return Ok(order);
            /* return CreatedAtAction(
                 nameof(GetOrderByIdAsync), 
                 new { id = order.Id }, 
                 order);
            */
+            return CreatedAtRoute(
+                "GetOrderById",
+                new { id = order.Id },
+                order);
         }
 
         [HttpDelete("{id}")]

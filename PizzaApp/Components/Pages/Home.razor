@@ -1,5 +1,29 @@
 ﻿@page "/"
+@inject IOrderApiService OrderApiService
 
-<h1>Hello, world!</h1>
+<h1>Beställda pizzor</h1>
 
-Welcome to your new app.
+@if (orders.Count == 0)
+{
+    <p>Inga Beställningar gjorda</p>
+}
+else
+{
+    <ul>
+        @foreach (var order in orders)
+        {
+            <li>
+                @order.Name - @order.Pizza
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<PizzaOrder> orders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        orders = await OrderApiService.GetOrdersAsync();
+    }
+}

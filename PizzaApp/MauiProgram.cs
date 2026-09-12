@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using PizzaApp.Services;
 
 namespace PizzaApp
 {
@@ -13,6 +14,12 @@ namespace PizzaApp
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 });
+
+            builder.Services.AddHttpClient<IOrderApiService, OrderApiService>(client =>
+            {
+                client.BaseAddress = new Uri("https://localhost:7113/");
+            });
+                        
 
             builder.Services.AddMauiBlazorWebView();
 

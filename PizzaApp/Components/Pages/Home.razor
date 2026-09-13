@@ -17,10 +17,60 @@ else
             </li>
         }
     </ul>
+
+    <h2>Lägg till en ny beställning</h2>
+
+    <div>
+        <label>Namn</label>
+        <input @bind="name" />
+    </div>
+
+    <div>
+        <label>Pizza</label>
+        <input @bind="pizza" />
+    </div>
+
+    <div>
+        <label>Kommentar</label>
+        <input @bind="comment" />
+    </div>
+
+    <button @onclick="CreateOrderAsync">
+        Skapa beställning
+        </button>
+
+
 }
 
 @code {
+
+    private string name = string.Empty;
+    private string pizza = string.Empty;
+    private string? comment;
+
     private List<PizzaOrder> orders = new();
+
+
+    private async Task CreateOrderAsync()
+    {
+        var order = new PizzaOrder
+            {
+                Name = name,
+                Pizza = pizza,
+                Comment = comment
+            };
+
+        var createdOrder = await OrderApiService.CreateOrderAsync(order);
+
+        if (createdOrder != null)
+        {
+            orders.Add(createdOrder);
+
+            name = string.Empty;
+            pizza = string.Empty;
+            comment = string.Empty;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

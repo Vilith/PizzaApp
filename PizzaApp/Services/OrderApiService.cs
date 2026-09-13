@@ -12,7 +12,7 @@ namespace PizzaApp.Services
     {
         private readonly HttpClient _httpClient;
 
-        public OrderApiService(HttpClient httpClient) => _httpClient = httpClient;
+        public OrderApiService(HttpClient httpClient) => _httpClient = httpClient;        
 
         public async Task<List<PizzaOrder>> GetOrdersAsync()
         {
@@ -20,6 +20,18 @@ namespace PizzaApp.Services
             var orders = await _httpClient.GetFromJsonAsync<List<PizzaOrder>>("api/orders");
 
             return orders ?? new List<PizzaOrder>();
+        }
+
+        public async Task<PizzaOrder?> CreateOrderAsync(PizzaOrder order)
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/orders", order);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<PizzaOrder>();            
         }
     }
 }

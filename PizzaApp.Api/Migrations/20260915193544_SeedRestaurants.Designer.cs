@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PizzaApp.Api.Data;
@@ -11,9 +12,11 @@ using PizzaApp.Api.Data;
 namespace PizzaApp.Api.Migrations
 {
     [DbContext(typeof(PizzaDbContext))]
-    partial class PizzaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260915193544_SeedRestaurants")]
+    partial class SeedRestaurants
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -89,18 +92,6 @@ namespace PizzaApp.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Restaurants");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Name = "Kvänum Pizzeria"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Name = "Sperring"
-                        });
                 });
 
             modelBuilder.Entity("PizzaApp.Api.Models.MenuItem", b =>

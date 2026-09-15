@@ -19,7 +19,12 @@ namespace PizzaApp
             {
                 client.BaseAddress = new Uri("https://localhost:7113/");
             });
-                        
+
+            builder.Services.AddHttpClient<IRestaurantApiService, RestaurantApiService>(client =>
+            {
+                client.BaseAddress = new Uri("https://localhost:7113/");
+            });
+
 
             builder.Services.AddMauiBlazorWebView();
 

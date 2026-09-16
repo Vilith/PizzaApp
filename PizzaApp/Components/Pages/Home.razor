@@ -1,22 +1,32 @@
 ﻿@page "/"
 @inject IOrderApiService OrderApiService
+@inject IRestaurantApiService RestaurantApiService
 
 <h1>Beställda pizzor</h1>
 
-@if (orders.Count == 0)
+@if (restaurants.Count == 0)
 {
     <p>Inga Beställningar gjorda</p>
 }
 else
 {
     <ul>
-        @foreach (var order in orders)
+        @foreach (var restaurant in restaurants)
         {
             <li>
-                @order.Name - @order.Pizza
+                <button @onclick="() => SelectRestaurant(restaurant)">                
+                @restaurant.Name
+                </button>
             </li>
         }
     </ul>
+
+    @if (selectedRestaurant != null)
+    {
+        <p>
+            Du har valt: @selectedRestaurant.Name
+        </p>
+    }
 
     <h2>Lägg till en ny beställning</h2>
 
@@ -58,9 +68,17 @@ else
     // private string? comment;
 
     private PizzaOrderInput orderInput = new();
-
     private List<PizzaOrder> orders = new();
 
+
+    private Restaurant? selectedRestaurant;
+    private List<Restaurant> restaurants = new();
+
+    private void SelectRestaurant(Restaurant restaurant)
+    {
+        selectedRestaurant = restaurant;
+    }
+   
 
     private async Task CreateOrderAsync()
     {
@@ -84,5 +102,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         orders = await OrderApiService.GetOrdersAsync();
+
+        restaurants = await RestaurantApiService.GetRestaurantsAsync();
     }
+   
 }

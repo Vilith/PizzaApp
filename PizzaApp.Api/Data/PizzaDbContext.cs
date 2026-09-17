@@ -30,6 +30,36 @@ namespace PizzaApp.Api.Data
                     Id = 2,
                     Name = "Sperring"
                 });
+
+            modelBuilder.Entity<MenuItem>().HasData(
+                new MenuItem()
+                {
+                    Id = 1,
+                    Name = "Margharita",
+                    Price = 95,
+                    RestaurantId = 1
+                },
+                new MenuItem()
+                {
+                    Id = 2,
+                    Name = "Vesuvio",
+                    Price = 95,
+                    RestaurantId = 1
+                },
+                new MenuItem()
+                {
+                    Id = 3,
+                    Name = "Capricciosa",
+                    Price = 95,
+                    RestaurantId = 1
+                },
+                new MenuItem()
+                {
+                    Id = 4,
+                    Name = "Hawaii",
+                    Price = 95,
+                    RestaurantId = 1
+                });
         }
     }
 }

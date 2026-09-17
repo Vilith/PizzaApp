@@ -21,6 +21,23 @@ namespace PizzaApp.Api.Controllers
 
             return Ok(restaurants);
         }
+
+        [HttpGet("{id}/menu")]
+        public async Task<ActionResult<IEnumerable<MenuItem>>> GetMenuAsync(int id)
+        {
+            var restaurantExists = await _context.Restaurants.AnyAsync(r => r.Id == id);
+
+            if (!restaurantExists)
+            {
+                return NotFound($"Restaurang med ID {id} hittades inte.");
+            }
+
+            var menuItems = await _context.MenuItems
+                .Where(m => m.RestaurantId == id)
+                .ToListAsync();
+
+            return Ok(menuItems);
+        }
         
         
     }

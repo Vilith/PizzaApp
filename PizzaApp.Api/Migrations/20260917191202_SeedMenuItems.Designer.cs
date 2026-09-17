@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PizzaApp.Api.Data;
@@ -11,9 +12,11 @@ using PizzaApp.Api.Data;
 namespace PizzaApp.Api.Migrations
 {
     [DbContext(typeof(PizzaDbContext))]
-    partial class PizzaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917191202_SeedMenuItems")]
+    partial class SeedMenuItems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -45,36 +48,6 @@ namespace PizzaApp.Api.Migrations
                     b.HasIndex("RestaurantId");
 
                     b.ToTable("MenuItems");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Name = "Margharita",
-                            Price = 95m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Name = "Vesuvio",
-                            Price = 95m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Name = "Capricciosa",
-                            Price = 95m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Name = "Hawaii",
-                            Price = 95m,
-                            RestaurantId = 1
-                        });
                 });
 
             modelBuilder.Entity("PizzaApp.Api.Models.PizzaOrder", b =>

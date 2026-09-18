@@ -1,10 +1,7 @@
 ﻿using PizzaApp.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http.Json;
-using System.Text;
-using System.Threading.Tasks;
+using MenuItemModel = PizzaApp.Models.MenuItem;
+
 
 namespace PizzaApp.Services
 {
@@ -12,7 +9,7 @@ namespace PizzaApp.Services
     {
         private readonly HttpClient _httpClient;
 
-        public RestaurantApiService(HttpClient httpClient) => _httpClient = httpClient;
+        public RestaurantApiService(HttpClient httpClient) => _httpClient = httpClient;        
 
         public async Task<List<Restaurant>> GetRestaurantsAsync()
         {
@@ -20,5 +17,15 @@ namespace PizzaApp.Services
 
             return restaurants ?? new List<Restaurant>();
         }
+
+
+        public async Task<List<MenuItemModel>> GetMenuAsync(int restaurantId)
+        {
+            var menuItems = await _httpClient.GetFromJsonAsync<List<MenuItemModel>>(
+                $"api/restaurants/{restaurantId}/menu");
+
+            return menuItems ?? new List<MenuItemModel>();
+        }
+
     }
 }

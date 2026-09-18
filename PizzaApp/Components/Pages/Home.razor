@@ -23,9 +23,25 @@ else
 
     @if (selectedRestaurant != null)
     {
-        <p>
-            Du har valt: @selectedRestaurant.Name
-        </p>
+        <h2>Meny: @selectedRestaurant.Name</h2>
+
+        @if (isLoadingMenu)
+        {
+            <p>Laddar meny...</p>
+        }
+        else if (menuItems.Count == 0)
+        {
+            <p>Hittade ingen mat.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var menuItem in menuItems)
+                {
+                    <li>@menuItem.Name - @menuItem.Price kr</li>
+                }
+            </ul>
+        }
     }
 
     <h2>Lägg till en ny beställning</h2>
@@ -68,16 +84,22 @@ else
     // private string? comment;
 
     private PizzaOrderInput orderInput = new();
-    private List<PizzaOrder> orders = new();
+    private List<PizzaOrder> orders = new();    
 
+    private List<MenuItem> menuItems = new();
+    private bool isLoadingMenu;
 
     private Restaurant? selectedRestaurant;
     private List<Restaurant> restaurants = new();
 
-    private void SelectRestaurant(Restaurant restaurant)
+    private async Task SelectRestaurant(Restaurant restaurant)
     {
         selectedRestaurant = restaurant;
-    }
+        isLoadingMenu = true;
+
+        menuItems = await RestaurantApiService.GetMenuAsync(restaurant.Id);
+        isLoadingMenu = false;
+    }    
    
 
     private async Task CreateOrderAsync()

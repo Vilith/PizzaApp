@@ -38,43 +38,48 @@ else
             <ul>
                 @foreach (var menuItem in menuItems)
                 {
-                    <li>@menuItem.Name - @menuItem.Price kr</li>
+                    <li>
+                        <button @onclick=" () => SelectMenuItem(menuItem)">
+                            @menuItem.Name - @menuItem.Price kr
+                        </button>
+                    </li>
                 }
             </ul>
         }
+
+        @if (selectedMenuItem != null)
+        {
+            <h2>Lägg till en ny beställning</h2>
+
+            <EditForm Model="@orderInput" OnValidSubmit="CreateOrderAsync">
+
+                <DataAnnotationsValidator />
+
+                <div>
+                    <label>Namn</label>
+                    <InputText @bind-Value="orderInput.Name" />
+                    <ValidationMessage For="@(() => orderInput.Name)" />
+                </div>
+
+                <div>
+                    <label>Pizza</label>
+                    <InputText @bind-Value="orderInput.Pizza" readonly />
+                    <ValidationMessage For="@(() => orderInput.Pizza)" />
+                </div>
+
+                <div>
+                    <label>Kommentar</label>
+                    <InputText @bind-Value="orderInput.Comment" />
+                    <ValidationMessage For="@(() => orderInput.Comment)" />
+                </div>
+
+                <button type="submit">
+                    Skapa beställning
+                </button>
+
+            </EditForm>
+        }
     }
-
-    <h2>Lägg till en ny beställning</h2>
-
-    <EditForm Model="@orderInput" OnValidSubmit="CreateOrderAsync">
-
-        <DataAnnotationsValidator />
-
-        <div>
-            <label>Namn</label>
-            <InputText @bind-Value="orderInput.Name" />
-            <ValidationMessage For="@(() => orderInput.Name)" />
-        </div>
-
-        <div>
-            <label>Pizza</label>
-            <InputText @bind-Value="orderInput.Pizza" />
-            <ValidationMessage For="@(() => orderInput.Pizza)" />
-        </div>
-
-        <div>
-            <label>Kommentar</label>
-            <InputText @bind-Value="orderInput.Comment" />
-            <ValidationMessage For="@(() => orderInput.Comment)" />
-        </div>
-
-        <button type="submit">
-            Skapa beställning
-        </button>
-
-    </EditForm>
-
-
 }
 
 @code {
@@ -92,6 +97,8 @@ else
     private Restaurant? selectedRestaurant;
     private List<Restaurant> restaurants = new();
 
+    private MenuItem? selectedMenuItem;
+
     private async Task SelectRestaurant(Restaurant restaurant)
     {
         selectedRestaurant = restaurant;
@@ -99,8 +106,15 @@ else
 
         menuItems = await RestaurantApiService.GetMenuAsync(restaurant.Id);
         isLoadingMenu = false;
-    }    
-   
+    }
+
+    private void SelectMenuItem(MenuItem menuItem)
+    {
+        selectedMenuItem = menuItem;
+
+        orderInput.Pizza = menuItem.Name;
+    }
+
 
     private async Task CreateOrderAsync()
     {

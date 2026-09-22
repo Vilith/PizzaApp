@@ -2,211 +2,285 @@
 @inject IOrderApiService OrderApiService
 @inject IRestaurantApiService RestaurantApiService
 
-<h1>Beställ pizza</h1>
-<p>Välj restaurang och pizza, och fyll sedan i din beställning.</p>
-
-@if (isLoading)
+@if (restaurant == null)
 {
-    <p role="status">Laddar restauranger och beställningar...</p>
+    <div class="intro">
+        <p class="eyebrow">DAGENS LUNCH</p>
+        <h1>Vad vill du beställa?</h1>
+        <p>Välj restaurang och spara ditt val. Vi samlar dagens beställningar åt den som ringer.</p>
+    </div>
+    @if (loading)
+    {
+        <p role="status">Laddar restauranger…</p>
+    }
+    else
+    {
+        <div class="restaurant-grid">
+            @foreach (var item in restaurants)
+            {
+                <button class="restaurant-card" data-restaurant="@item.Id" @onclick="() => SelectRestaurant(item)">
+                    <span class="food-symbol" aria-hidden="true">@(item.IsPizzeria ? "◔" : "♧")</span>
+                    <span class="restaurant-copy">
+                        <strong>@(item.IsPizzeria ? "Pizzeria" : "À la carte")</strong>
+                        <span class="restaurant-name">@item.Name</span>
+                        <span>@(item.IsPizzeria ? "Välj pizza, sås och dryck." : "Välj din rätt och antal portioner.")</span>
+                        <span class="card-tag">@(item.IsPizzeria ? "Beställ senast 11:15" : "Egen beställningslista")</span>
+                    </span>
+                    <span class="card-arrow" aria-hidden="true">→</span>
+                </button>
+            }
+        </div>
+        @if (restaurants.Count == 0 && error == null) { <p>Det finns inga restauranger ännu.</p> }
+        <div class="info-note">Ingen inloggning behövs. Namn är valfritt och varje restaurang har sin egen lista.</div>
+    }
 }
 else
 {
-    @if (loadError != null)
-    {
-        <div class="alert alert-danger" role="alert">@loadError</div>
-        <button class="btn btn-outline-primary mb-3" @onclick="LoadAsync">Försök igen</button>
-    }
-    <h2>Restauranger</h2>
-    @if (restaurants.Count == 0 && loadError == null)
-    {
-        <p>Det finns inga restauranger ännu.</p>
-    }
-    <div class="d-flex flex-wrap gap-2 mb-4">
-        @foreach (var restaurant in restaurants)
+    <div class="restaurant-toolbar">
+        <button class="text-button" data-action="restaurants" disabled="@(busy || loading)" @onclick="Back">← Byt restaurang</button>
+        <span class="restaurant-label">@(restaurant.IsPizzeria ? "Pizzeria" : "À la carte")</span>
+    </div>
+    <div class="page-heading">
+        <div><p class="eyebrow">@restaurant.Name</p><h1>Vad blir det till lunch?</h1></div>
+        @if (daily != null)
         {
-            <button class="btn @(selectedRestaurant?.Id == restaurant.Id ? "btn-primary" : "btn-outline-primary")"
-                    disabled="@isSubmitting" @onclick="() => SelectRestaurant(restaurant)">
-                @restaurant.Name
-            </button>
+            <a class="list-link" href="#daily-list">Dagens lista <span>@daily.Orders.Sum(o => o.Quantity)</span></a>
         }
     </div>
-    @if (selectedRestaurant != null)
+    @if (loading)
     {
-        <h2>Meny: @selectedRestaurant.Name</h2>
-        @if (isLoadingMenu)
+        <p role="status">Laddar meny och dagens lista…</p>
+    }
+    else if (daily != null)
+    {
+        @if (restaurant.IsPizzeria)
         {
-            <p role="status">Laddar meny...</p>
-        }
-        else if (menuError != null)
-        {
-            <div class="alert alert-danger" role="alert">@menuError</div>
-            <button class="btn btn-outline-primary" @onclick="() => SelectRestaurant(selectedRestaurant!)">Försök igen</button>
-        }
-        else if (menuItems.Count == 0)
-        {
-            <p>Restaurangen har inga rätter i menyn ännu.</p>
-        }
-        else
-        {
-            <div class="d-flex flex-wrap gap-2 mb-4">
-                @foreach (var menuItem in menuItems)
-                {
-                    <button class="btn @(selectedMenuItem == menuItem ? "btn-primary" : "btn-outline-primary")"
-                            disabled="@isSubmitting" @onclick="() => SelectMenuItem(menuItem)">
-                        @menuItem.Name – @menuItem.Price.ToString("0.##") kr
-                    </button>
-                }
+            <div class="deadline @(daily.DeadlinePassed ? "deadline-late" : "")" role="status">
+                <strong>Beställ senast @daily.Deadline</strong>
+                <span>@(daily.IsLocked ? "Dagens beställningar är låsta." : daily.DeadlinePassed
+                    ? "Deadline har passerat. Du kan fortfarande lägga till och ändra." : "Spara ditt val i den gemensamma listan. Tiden gäller svensk tid.")</span>
             </div>
         }
-        @if (selectedMenuItem != null)
-        {
-            <h2>Din beställning</h2>
-            <EditForm Model="@orderInput" OnValidSubmit="CreateOrderAsync">
-                <DataAnnotationsValidator />
-                <fieldset disabled="@isSubmitting">
-                    <div class="mb-3">
-                        <label for="customer-name" class="form-label">Namn</label>
-                        <InputText id="customer-name" class="form-control" @bind-Value="orderInput.Name" />
-                        <ValidationMessage For="@(() => orderInput.Name)" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="pizza" class="form-label">Pizza</label>
-                        <InputText id="pizza" class="form-control" @bind-Value="orderInput.Pizza" readonly />
-                        <ValidationMessage For="@(() => orderInput.Pizza)" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="comment" class="form-label">Kommentar (valfritt)</label>
-                        <InputTextArea id="comment" class="form-control" @bind-Value="orderInput.Comment" />
-                    </div>
-                    <button class="btn btn-primary" type="submit">@(isSubmitting ? "Skickar..." : "Skapa beställning")</button>
-                </fieldset>
-            </EditForm>
-        }
-    }
-    @if (submitError != null)
-    {
-        <div class="alert alert-danger mt-3" role="alert">@submitError</div>
-    }
-    @if (successMessage != null)
-    {
-        <div class="alert alert-success mt-3" role="status">@successMessage</div>
-    }
-    <h2 class="mt-4">Beställda pizzor</h2>
-    <button class="btn btn-outline-primary mb-3" disabled="@isSubmitting" @onclick="LoadAsync">Uppdatera listan</button>
-    @if (orders.Count == 0 && loadError == null)
-    {
-        <p>Inga beställningar gjorda ännu.</p>
-    }
-    <ul class="list-group">
-        @foreach (var order in orders)
-        {
-            <li class="list-group-item" @key="order.Id">
-                <strong>@order.Name</strong> – @order.Pizza
-                @if (!string.IsNullOrWhiteSpace(order.Comment))
+        <div class="order-grid">
+            <section class="panel menu-panel" aria-labelledby="menu-heading">
+                <p class="eyebrow">VÄLJ DIN FAVORIT</p>
+                <h2 id="menu-heading">@(restaurant.IsPizzeria ? "Pizzor" : "À la carte")</h2>
+                @if (menu.Count == 0) { <p>Menyn är inte upplagd ännu.</p> }
+                <div class="menu-list">
+                    @foreach (var item in menu)
+                    {
+                        <button class="menu-item @(input?.MenuItemId == item.Id ? "selected" : "")" data-menu-item="@item.Id"
+                                disabled="@(busy || daily.IsLocked)" @onclick="() => SelectItem(item)">
+                            <span class="menu-number" aria-hidden="true">@(menu.IndexOf(item) + 1)</span>
+                            <span><strong>@item.Name</strong><small>@item.Price.ToString("0.##") kr</small></span>
+                            <span class="add-icon" aria-hidden="true">+</span>
+                        </button>
+                    }
+                </div>
+            </section>
+            <section class="panel selection-panel" aria-labelledby="selection-heading">
+                @if (input == null)
                 {
-                    <div>@order.Comment</div>
+                    <div class="empty-selection"><span aria-hidden="true">＋</span><h2 id="selection-heading">Gör ditt val</h2><p>Välj en rätt från menyn för att lägga till den i dagens lista.</p></div>
                 }
-                <small class="text-muted">@order.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</small>
-            </li>
-        }
-    </ul>
+                else
+                {
+                    <p class="eyebrow">@(editingId.HasValue ? "ÄNDRA BESTÄLLNING" : "DITT VAL")</p>
+                    <h2 id="selection-heading">@menu.FirstOrDefault(m => m.Id == input.MenuItemId)?.Name</h2>
+                    <EditForm Model="input" OnValidSubmit="Save" @key="input">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <fieldset disabled="@(busy || daily.IsLocked)">
+                            @if (restaurant.IsPizzeria)
+                            {
+                                <label for="sauce">Välj sås <span>(obligatoriskt)</span></label>
+                                <InputSelect id="sauce" class="form-select" @bind-Value="input.Sauce" required>
+                                    <option value="">Välj sås…</option>
+                                    @foreach (var sauce in PizzaChoices.Sauces) { <option value="@sauce">@sauce</option> }
+                                </InputSelect>
+                                <label for="drink">Välj dryck <span>(obligatoriskt)</span></label>
+                                <InputSelect id="drink" class="form-select" @bind-Value="input.Drink" required>
+                                    <option value="">Välj dryck…</option>
+                                    @foreach (var drink in PizzaChoices.Drinks) { <option value="@drink">@drink</option> }
+                                </InputSelect>
+                            }
+                            <div class="form-row">
+                                <div><label for="quantity">Antal</label><InputNumber id="quantity" class="form-control" @bind-Value="input.Quantity" min="1" max="99" /></div>
+                                <div><label for="customer-name">Namn <span>(valfritt)</span></label><InputText id="customer-name" class="form-control" @bind-Value="input.Name" maxlength="100" /></div>
+                            </div>
+                            <label for="comment">Kommentar <span>(valfritt)</span></label>
+                            <InputTextArea id="comment" class="form-control" @bind-Value="input.Comment" maxlength="500" placeholder="Till exempel utan lök" />
+                            <div class="form-actions">
+                                <button class="btn btn-primary" type="submit">@(busy ? "Sparar…" : editingId.HasValue ? "Spara ändringar" : "Spara beställning")</button>
+                                <button class="text-button" type="button" @onclick="CancelEdit">Avbryt</button>
+                            </div>
+                        </fieldset>
+                    </EditForm>
+                }
+            </section>
+        </div>
+        @if (success != null) { <div class="alert alert-success" role="status">@success</div> }
+        <section id="daily-list" class="panel daily-panel" aria-labelledby="daily-heading">
+            <div class="list-heading">
+                <div><p class="eyebrow">@daily.Date.ToString("yyyy-MM-dd") · @restaurant.Name</p><h2 id="daily-heading">Dagens beställningslista</h2></div>
+                <button class="btn btn-outline-primary" disabled="@busy" @onclick="Refresh">Uppdatera listan</button>
+            </div>
+            <p class="muted">Gemensam lista · @daily.Orders.Sum(o => o.Quantity) portioner · Hämtad @lastRefreshed</p>
+            @if (daily.Orders.Count == 0)
+            {
+                <div class="empty-list">Ingen har beställt ännu. Lägg till dagens första rätt!</div>
+            }
+            else
+            {
+                <div class="summary-box">
+                    <h3>Att ringa in</h3><p>Identiska val är sammanräknade. Olika tillval och kommentarer visas separat.</p>
+                    @foreach (var row in daily.Summary)
+                    {
+                        <div class="summary-row"><strong>@row.Quantity × @row.Pizza</strong><span>@Extras(row.Sauce, row.Drink)</span>
+                            @if (row.Comment != null) { <span class="order-comment">@row.Comment</span> }
+                        </div>
+                    }
+                </div>
+                <details class="individual-orders" open>
+                    <summary>Alla beställningar (@daily.Orders.Count)</summary>
+                    @foreach (var order in daily.Orders)
+                    {
+                        <div class="order-row" @key="order.Id">
+                            <div><strong>@order.Quantity × @order.Pizza</strong><span>@Extras(order.Sauce, order.Drink)</span>
+                                @if (!string.IsNullOrWhiteSpace(order.Comment)) { <span class="order-comment">@order.Comment</span> }
+                                <small>@(string.IsNullOrWhiteSpace(order.Name) ? "Utan namn" : order.Name)</small>
+                            </div>
+                            <div class="row-actions">
+                                <button class="text-button" data-edit="@order.Id" disabled="@(busy || daily.IsLocked)" @onclick="() => Edit(order)">Ändra</button>
+                                <button class="text-button danger" data-delete="@order.Id" disabled="@(busy || daily.IsLocked)" @onclick="() => deleteId = order.Id">Ta bort</button>
+                            </div>
+                            @if (deleteId == order.Id)
+                            {
+                                <div class="delete-confirm" role="alert"><span>Ta bort @order.Quantity × @order.Pizza?</span>
+                                    <button class="btn btn-danger btn-sm" disabled="@busy" @onclick="() => Delete(order)">Ja, ta bort</button>
+                                    <button class="text-button" disabled="@busy" @onclick="() => deleteId = null">Avbryt</button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </details>
+            }
+        </section>
+    }
+}
+@if (error != null)
+{
+    <div class="alert alert-danger mt-3" role="alert">@error</div>
+    <button class="btn btn-outline-primary" disabled="@(busy || loading)" @onclick="Reload">Hämta senaste uppgifter</button>
 }
 
 @code {
-    private PizzaOrderInput orderInput = new();
-    private List<PizzaOrder> orders = new();
-    private List<MenuItem> menuItems = new();
-    private List<Restaurant> restaurants = new();
-    private Restaurant? selectedRestaurant;
-    private MenuItem? selectedMenuItem;
-    private bool isLoading = true;
-    private bool isLoadingMenu;
-    private bool isSubmitting;
-    private int menuRequestVersion;
-    private string? loadError;
-    private string? menuError;
-    private string? submitError;
-    private string? successMessage;
+    private List<Restaurant> restaurants = [];
+    private List<MenuItem> menu = [];
+    private Restaurant? restaurant;
+    private DailyOrderList? daily;
+    private OrderInput? input;
+    private int? editingId;
+    private int? deleteId;
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+    private string? success;
+    private string lastRefreshed = "";
 
-    protected override Task OnInitializedAsync() => LoadAsync();
+    protected override Task OnInitializedAsync() => LoadRestaurants();
 
-    private async Task LoadAsync()
+    private static bool IsConnectionError(Exception ex) => ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or OrderApiException;
+    private static string Extras(string? sauce, string? drink) => string.Join(" · ", new[] { sauce, drink }.Where(s => !string.IsNullOrEmpty(s)));
+
+    private async Task LoadRestaurants()
     {
-        isLoading = true;
-        loadError = null;
-        try
-        {
-            restaurants = await RestaurantApiService.GetRestaurantsAsync();
-            orders = await OrderApiService.GetOrdersAsync();
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
-        {
-            loadError = "Kunde inte hämta restauranger eller beställningar. Kontrollera anslutningen och försök igen.";
-        }
-        finally { isLoading = false; }
+        loading = true; error = null;
+        try { restaurants = await RestaurantApiService.GetRestaurantsAsync(); }
+        catch (Exception ex) when (IsConnectionError(ex)) { error = "Kunde inte hämta restaurangerna. Kontrollera anslutningen och försök igen."; }
+        finally { loading = false; }
     }
 
-    private async Task SelectRestaurant(Restaurant restaurant)
+    private async Task SelectRestaurant(Restaurant selected)
     {
-        if (isSubmitting) return;
-        var requestVersion = ++menuRequestVersion;
-        selectedRestaurant = restaurant;
-        selectedMenuItem = null;
-        orderInput.Pizza = string.Empty;
-        menuItems.Clear();
-        menuError = submitError = successMessage = null;
-        isLoadingMenu = true;
+        if (busy) return;
+        restaurant = selected; daily = null; menu = []; input = null; editingId = deleteId = null;
+        loading = true; error = success = null;
         try
         {
-            var result = await RestaurantApiService.GetMenuAsync(restaurant.Id);
-            if (requestVersion == menuRequestVersion) menuItems = result;
+            menu = await RestaurantApiService.GetMenuAsync(selected.Id);
+            await LoadList();
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
-        {
-            if (requestVersion == menuRequestVersion) menuError = "Kunde inte hämta menyn. Försök igen.";
-        }
-        finally
-        {
-            if (requestVersion == menuRequestVersion) isLoadingMenu = false;
-        }
+        catch (Exception ex) when (IsConnectionError(ex)) { error = "Kunde inte hämta menyn och dagens lista. Försök igen."; }
+        finally { loading = false; }
     }
 
-    private void SelectMenuItem(MenuItem menuItem)
+    private async Task LoadList()
     {
-        if (isSubmitting) return;
-        selectedMenuItem = menuItem;
-        orderInput.Pizza = menuItem.Name;
-        submitError = successMessage = null;
+        daily = await OrderApiService.GetTodayAsync(restaurant!.Id);
+        lastRefreshed = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "Europe/Stockholm").ToString("HH:mm:ss");
     }
 
-    private async Task CreateOrderAsync()
+    private async Task Refresh()
     {
-        if (isSubmitting || selectedMenuItem == null) return;
-        isSubmitting = true;
-        submitError = successMessage = null;
+        if (busy) return;
+        busy = true; error = null;
+        try { await LoadList(); }
+        catch (Exception ex) when (IsConnectionError(ex)) { error = "Kunde inte uppdatera listan. Uppgifterna som visas kan vara gamla."; }
+        finally { busy = false; }
+    }
+
+    private Task Reload() => restaurant == null ? LoadRestaurants() : daily == null ? SelectRestaurant(restaurant) : Refresh();
+    private void Back() { if (busy || loading) return; restaurant = null; input = null; daily = null; error = success = null; }
+    private void CancelEdit() { input = null; editingId = null; }
+    private void SelectItem(MenuItem item)
+    {
+        if (busy || daily?.IsLocked != false) return;
+        if (input == null) input = new();
+        input.MenuItemId = item.Id;
+        error = success = null;
+    }
+    private void Edit(OrderDetails order)
+    {
+        editingId = order.Id; error = success = null;
+        input = new() { MenuItemId = order.MenuItemId, Quantity = order.Quantity, Name = order.Name,
+            Sauce = order.Sauce, Drink = order.Drink, Comment = order.Comment, Revision = order.Revision };
+    }
+
+    private async Task Save()
+    {
+        if (busy || input == null || restaurant == null || daily?.IsLocked != false) return;
+        if (restaurant.IsPizzeria && (string.IsNullOrEmpty(input.Sauce) || string.IsNullOrEmpty(input.Drink)))
+        { error = "Välj sås och dryck innan du sparar."; return; }
+        busy = true; error = success = null;
         try
         {
-            var createdOrder = await OrderApiService.CreateOrderAsync(new PizzaOrder
-            {
-                Name = orderInput.Name.Trim(),
-                Pizza = selectedMenuItem.Name,
-                Comment = orderInput.Comment?.Trim()
-            });
-            if (createdOrder == null)
-            {
-                submitError = "Beställningen kunde inte sparas. Kontrollera uppgifterna och försök igen.";
-                return;
-            }
-            orders.Insert(0, createdOrder);
-            successMessage = $"Tack {createdOrder.Name}! Din beställning av {createdOrder.Pizza} är sparad.";
-            orderInput = new();
-            selectedMenuItem = null;
+            await OrderApiService.SaveAsync(restaurant.Id, input, editingId);
+            input = null; editingId = null;
+            success = "Beställningen är sparad i dagens lista.";
+            try { await LoadList(); }
+            catch (Exception ex) when (IsConnectionError(ex)) { error = "Beställningen sparades, men listan kunde inte uppdateras. Hämta senaste uppgifter."; }
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        catch (OrderApiException ex) { error = ex.Message; }
+        catch (Exception ex) when (IsConnectionError(ex))
+        { error = "Svaret från servern kunde inte läsas. Beställningen kan ha sparats. Uppdatera listan innan du försöker igen."; }
+        finally { busy = false; }
+    }
+
+    private async Task Delete(OrderDetails order)
+    {
+        if (busy || restaurant == null || daily?.IsLocked != false) return;
+        busy = true; error = success = null;
+        try
         {
-            submitError = "Svaret från servern kunde inte läsas. Beställningen kan ha sparats. Kontrollera beställningslistan innan du försöker igen.";
+            await OrderApiService.DeleteAsync(restaurant.Id, order.Id, order.Revision);
+            deleteId = null;
+            if (editingId == order.Id) CancelEdit();
+            success = "Beställningen är borttagen.";
+            await LoadList();
         }
-        finally { isSubmitting = false; }
+        catch (OrderApiException ex) { error = ex.Message; }
+        catch (Exception ex) when (IsConnectionError(ex)) { error = "Kunde inte läsa serverns svar. Uppdatera listan för att se om beställningen är borttagen."; }
+        finally { busy = false; }
     }
 }
-

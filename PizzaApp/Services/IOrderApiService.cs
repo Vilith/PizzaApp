@@ -1,10 +1,10 @@
-﻿using PizzaApp.Models;
+using PizzaApp.Shared;
 
-namespace PizzaApp.Services
+namespace PizzaApp.Services;
+
+public interface IOrderApiService
 {
-    public interface IOrderApiService
-    {
-        Task<List<PizzaOrder>> GetOrdersAsync();
-        Task<PizzaOrder?> CreateOrderAsync(PizzaOrder order);
-    }
+    Task<DailyOrderList> GetTodayAsync(int restaurantId);
+    Task<OrderDetails> SaveAsync(int restaurantId, OrderInput input, int? id = null);
+    Task DeleteAsync(int restaurantId, int id, Guid revision);
 }

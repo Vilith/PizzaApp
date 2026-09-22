@@ -1,79 +1,35 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PizzaApp.Api.Data;
-using PizzaApp.Api.Models;
+using Microsoft.AspNetCore.Mvc;
+using PizzaApp.Api.Services;
+using PizzaApp.Shared;
 
-namespace PizzaApp.Api.Controllers
+namespace PizzaApp.Api.Controllers;
+
+[ApiController]
+[Route("api/restaurants/{restaurantId:int}/orders")]
+public class OrdersController(OrderService service) : ControllerBase
 {
+    [HttpGet]
+    public Task<ActionResult<DailyOrderList>> GetToday(int restaurantId) =>
+        Handle(() => service.GetTodayAsync(restaurantId));
 
-    [ApiController]
-    [Route("api/[controller]")]
-    public class OrdersController : ControllerBase
+    [HttpPost]
+    public Task<ActionResult<OrderDetails>> Create(int restaurantId, OrderInput input) =>
+        Handle(() => service.SaveAsync(restaurantId, input));
+
+    [HttpPut("{id:int}")]
+    public Task<ActionResult<OrderDetails>> Update(int restaurantId, int id, OrderInput input) =>
+        Handle(() => service.SaveAsync(restaurantId, input, id));
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int restaurantId, int id, [FromQuery] Guid revision)
     {
-        private readonly PizzaDbContext _context;
+        try { await service.DeleteAsync(restaurantId, id, revision); return NoContent(); }
+        catch (OrderException ex) { return Problem(detail: ex.Message, statusCode: ex.StatusCode); }
+    }
 
-        public OrdersController(PizzaDbContext context)
-        {
-            _context = context;
-        }
-
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<PizzaOrder>>> GetOrdersAsync()
-        {
-            var orders = await _context.Orders
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
-
-            return Ok(orders);
-        }
-
-        [HttpGet("{id}", Name = "GetOrderById")]
-        public async Task<ActionResult<PizzaOrder>> GetOrderByIdAsync(int id)
-        {
-            var order = await _context.Orders.FindAsync(id);
-
-            if (order == null)
-            {
-                return NotFound($"Beställning med ID {id} hittades inte.");
-            }
-
-            return Ok(order);
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<PizzaOrder>> CreateOrderAsync(PizzaOrder order)
-        {
-            order.CreatedAt = DateTime.UtcNow;
-            
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync();
-
-            //return Ok(order);
-           /* return CreatedAtAction(
-                nameof(GetOrderByIdAsync), 
-                new { id = order.Id }, 
-                order);
-           */
-            return CreatedAtRoute(
-                "GetOrderById",
-                new { id = order.Id },
-                order);
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteOrderAsync(int id)
-        {
-            var order = await _context.Orders.FindAsync(id);
-
-            if (order == null)
-            {
-                return NotFound($"Beställning med ID {id} hittades inte.");
-            }
-
-            _context.Orders.Remove(order);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
+    private async Task<ActionResult<T>> Handle<T>(Func<Task<T>> action)
+    {
+        try { return Ok(await action()); }
+        catch (OrderException ex) { return Problem(detail: ex.Message, statusCode: ex.StatusCode); }
     }
 }

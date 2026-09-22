@@ -1,0 +1,136 @@
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using PizzaApp.Api;
+using PizzaApp.Api.Data;
+using PizzaApp.Api.Services;
+using PizzaApp.Shared;
+
+namespace PizzaApp.Tests;
+
+public class OrdersApiTests
+{
+    [Fact]
+    public async Task Client_service_uses_restaurant_routes_and_surfaces_deadline_errors()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        var api = new PizzaApp.Services.OrderApiService(client);
+        var order = await api.SaveAsync(1, Pizza());
+        Assert.Single((await api.GetTodayAsync(1)).Orders);
+        var edit = Pizza(); edit.Revision = order.Revision; edit.Quantity = 2;
+        order = await api.SaveAsync(1, edit, order.Id);
+        Assert.Equal(2, order.Quantity);
+        await api.DeleteAsync(1, order.Id, order.Revision);
+        Assert.Empty((await api.GetTodayAsync(1)).Orders);
+
+        using var lockedApp = new TestApp(locked: true); using var lockedClient = lockedApp.CreateClient();
+        var lockedApi = new PizzaApp.Services.OrderApiService(lockedClient);
+        var error = await Assert.ThrowsAsync<PizzaApp.Services.OrderApiException>(() => lockedApi.SaveAsync(1, Pizza()));
+        Assert.Contains("11:15", error.Message);
+    }
+
+    [Fact]
+    public async Task Save_read_edit_and_delete_through_http()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        var created = await client.PostAsJsonAsync("/api/restaurants/1/orders", Pizza());
+        created.EnsureSuccessStatusCode();
+        var order = (await created.Content.ReadFromJsonAsync<OrderDetails>())!;
+        var list = (await client.GetFromJsonAsync<DailyOrderList>("/api/restaurants/1/orders"))!;
+        Assert.Equal(order.Id, Assert.Single(list.Orders).Id);
+        Assert.Equal("Vesuvio", Assert.Single(list.Summary).Pizza);
+        var edit = Pizza(); edit.Quantity = 3; edit.Revision = order.Revision;
+        var updated = await client.PutAsJsonAsync($"/api/restaurants/1/orders/{order.Id}", edit);
+        updated.EnsureSuccessStatusCode();
+        var revised = (await updated.Content.ReadFromJsonAsync<OrderDetails>())!;
+        Assert.Equal(3, revised.Quantity);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/restaurants/1/orders/{order.Id}?revision={order.Revision}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/restaurants/1/orders/{order.Id}?revision={revised.Revision}")).StatusCode);
+        Assert.Empty((await client.GetFromJsonAsync<DailyOrderList>("/api/restaurants/1/orders"))!.Orders);
+    }
+
+    [Fact]
+    public async Task Invalid_payload_is_rejected_by_real_model_binding()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        var invalid = Pizza(); invalid.Quantity = 0;
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/restaurants/1/orders", invalid)).StatusCode);
+        Assert.Empty((await client.GetFromJsonAsync<DailyOrderList>("/api/restaurants/1/orders"))!.Orders);
+    }
+
+    [Fact]
+    public async Task Lock_cannot_be_bypassed_through_api_or_legacy_route()
+    {
+        using var app = new TestApp(locked: true); using var client = app.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/restaurants/1/orders", Pizza());
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("11:15", await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync("/api/orders", Pizza())).StatusCode);
+    }
+
+    [Fact]
+    public async Task Restaurant_and_menu_payloads_can_be_serialized_and_lists_stay_separate()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        var restaurants = await client.GetFromJsonAsync<List<PizzaApp.Models.Restaurant>>("/api/restaurants");
+        Assert.True(restaurants!.Single(r => r.Id == 1).IsPizzeria);
+        var menu = await client.GetFromJsonAsync<List<PizzaApp.Models.MenuItem>>("/api/restaurants/1/menu");
+        Assert.NotEmpty(menu!);
+        (await client.PostAsJsonAsync("/api/restaurants/1/orders", Pizza())).EnsureSuccessStatusCode();
+        Assert.Empty((await client.GetFromJsonAsync<DailyOrderList>("/api/restaurants/2/orders"))!.Orders);
+    }
+
+    [Fact]
+    public void Postgres_model_matches_migrations_and_upgrade_preserves_old_rows()
+    {
+        using var db = new PizzaDbContext(new DbContextOptionsBuilder<PizzaDbContext>()
+            .UseNpgsql("Host=localhost;Database=unused;Username=unused").Options);
+        Assert.False(db.Database.HasPendingModelChanges());
+        var sql = db.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrator>()
+            .GenerateScript("20260917191531_SeedMenuItemsTest");
+        Assert.Contains("OrderDate", sql);
+        Assert.DoesNotContain("DROP TABLE", sql);
+        Assert.DoesNotContain("DELETE FROM \"Orders\"", sql);
+    }
+
+    private static OrderInput Pizza() => new() { MenuItemId = 2, Sauce = "Ingen sås", Drink = "Vatten" };
+
+    private sealed class TestApp(bool locked = false) : WebApplicationFactory<Program>
+    {
+        private readonly SqliteConnection connection = new("Data Source=:memory:");
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<DbContextOptions<PizzaDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<PizzaDbContext>>();
+                services.RemoveAll<TimeProvider>();
+                connection.Open();
+                services.AddDbContext<PizzaDbContext>(o => o.UseSqlite(connection));
+                services.AddSingleton<TimeProvider>(new FixedClock());
+                services.Configure<OrderingOptions>(o => o.LockAfterDeadline = locked);
+            });
+        }
+        protected override IHost CreateHost(IHostBuilder builder)
+        {
+            var host = base.CreateHost(builder);
+            using var scope = host.Services.CreateScope();
+            scope.ServiceProvider.GetRequiredService<PizzaDbContext>().Database.EnsureCreated();
+            return host;
+        }
+        protected override void Dispose(bool disposing) { base.Dispose(disposing); if (disposing) connection.Dispose(); }
+    }
+
+    private sealed class FixedClock : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => DateTimeOffset.Parse("2026-09-22T12:00:00Z");
+    }
+}

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PizzaApp.Api.Data;
@@ -11,9 +12,11 @@ using PizzaApp.Api.Data;
 namespace PizzaApp.Api.Migrations
 {
     [DbContext(typeof(PizzaDbContext))]
-    partial class PizzaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260922160202_DailyRestaurantOrders")]
+    partial class DailyRestaurantOrders
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -74,34 +77,6 @@ namespace PizzaApp.Api.Migrations
                             Name = "Hawaii",
                             Price = 95m,
                             RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Name = "Oxfilé med potatis",
-                            Price = 189m,
-                            RestaurantId = 2
-                        },
-                        new
-                        {
-                            Id = 6,
-                            Name = "Kycklingfilé",
-                            Price = 159m,
-                            RestaurantId = 2
-                        },
-                        new
-                        {
-                            Id = 7,
-                            Name = "Pasta Carbonara",
-                            Price = 149m,
-                            RestaurantId = 2
-                        },
-                        new
-                        {
-                            Id = 8,
-                            Name = "Caesarsallad",
-                            Price = 139m,
-                            RestaurantId = 2
                         });
                 });
 

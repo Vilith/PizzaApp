@@ -1,17 +1,29 @@
-@PizzaApp.Api_HostAddress = http://localhost:5186
-
-GET {{PizzaApp.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
-
 @PizzaApp.Api_HostAddress = https://localhost:7113
 
-POST {{PizzaApp.Api_HostAddress}}/api/orders
+GET {{PizzaApp.Api_HostAddress}}/api/restaurants
+Accept: application/json
+
+### Pizzerians meny
+GET {{PizzaApp.Api_HostAddress}}/api/restaurants/1/menu
+Accept: application/json
+
+### Pizzerians lista för idag (svensk tid)
+GET {{PizzaApp.Api_HostAddress}}/api/restaurants/1/orders
+Accept: application/json
+
+### Spara ett val
+POST {{PizzaApp.Api_HostAddress}}/api/restaurants/1/orders
 Content-Type: application/json
 
 {
-  "name": "Christoffer",
-  "pizza": "Kebabpizza",
-  "comment": "Extra s�s"
+  "menuItemId": 2,
+  "quantity": 1,
+  "sauce": "Vitlökssås",
+  "drink": "Vatten",
+  "name": "",
+  "comment": null
 }
+
+### À la carte har en egen dagslista
+GET {{PizzaApp.Api_HostAddress}}/api/restaurants/2/orders
+Accept: application/json

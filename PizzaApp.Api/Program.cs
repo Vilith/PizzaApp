@@ -1,6 +1,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using PizzaApp.Api.Data;
+using PizzaApp.Api.Services;
 
 namespace PizzaApp.Api
 {
@@ -14,6 +15,9 @@ namespace PizzaApp.Api
 
             builder.Services.AddControllers();            
             builder.Services.AddOpenApi();
+            builder.Services.AddSingleton(TimeProvider.System);
+            builder.Services.Configure<OrderingOptions>(builder.Configuration.GetSection("Ordering"));
+            builder.Services.AddScoped<OrderService>();
 
             builder.Services.AddDbContext<PizzaDbContext>(options => 
             options.UseNpgsql(

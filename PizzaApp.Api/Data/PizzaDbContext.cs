@@ -10,6 +10,7 @@ namespace PizzaApp.Api.Data
         { }
 
         public DbSet<PizzaOrder> Orders => Set<PizzaOrder>();
+        public DbSet<CompletedOrderDay> CompletedOrderDays => Set<CompletedOrderDay>();
 
         public DbSet<Restaurant> Restaurants => Set<Restaurant>();
         public DbSet<MenuItem> MenuItems => Set<MenuItem>();
@@ -17,6 +18,9 @@ namespace PizzaApp.Api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<CompletedOrderDay>().HasKey(d => new { d.RestaurantId, d.Date });
+            modelBuilder.Entity<CompletedOrderDay>().HasOne<Restaurant>().WithMany()
+                .HasForeignKey(d => d.RestaurantId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<PizzaOrder>().HasIndex(o => new { o.RestaurantId, o.OrderDate });
             modelBuilder.Entity<PizzaOrder>().Property(o => o.Revision).IsConcurrencyToken();
             modelBuilder.Entity<PizzaOrder>().Property(o => o.Quantity).HasDefaultValue(1);

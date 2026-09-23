@@ -8,7 +8,9 @@ MAUI/Blazor-app med två restauranger och en separat gemensam beställningslista
 - Pizzeria: välj pizza, sås (inklusive Ingen sås), dryck och antal.
 - À la carte: välj rätt och antal, utan sås- eller dryckesval.
 - Namn och kommentar är valfria. Spara direkt i restaurangens dagslista.
-- Listan visar varje beställning samt en sammanställning för den som ska ringa. Identiska rätter och tillval summeras; olika kommentarer hålls isär.
+- ”Att ringa in” visar beställarnas namn med kryssrutor för vilka som kan hämta. Samma namn (oberoende av stora/små bokstäver) visas en gång. Namnlösa beställningar behöver ett namn innan de kan väljas som hämtare.
+- ”Alla drycker” är en egen utfällbar lista med antal per dryck. Varje portion räknas som en dryck. ”Alla beställningar” visar fortfarande rätter, tillval och kommentarer.
+- När maten är hämtad: låt de faktiska hämtarna vara ikryssade och tryck ”Pizzorna är hämtade” (”Maten är hämtad” för À la carte). Dagen låses och sparas i historiken. Minst en namngiven hämtare krävs. Hämtare kan väljas även efter deadline.
 - Ändra en beställning med Ändra och spara formuläret. Borttagning kräver bekräftelse.
 - Uppdatera listan för att hämta andras senaste beställningar. Tidpunkten för senaste hämtning visas. Vid samtidiga ändringar måste den senaste versionen hämtas och öppnas med Ändra igen.
 - Ingen inloggning krävs. Listorna är gemensamma och kan redigeras av dem som använder appen. Appen skickar inte beställningar till restaurangerna.
@@ -17,7 +19,7 @@ MAUI/Blazor-app med två restauranger och en separat gemensam beställningslista
 
 Förutsätter .NET 9, MAUI Windows och databasanslutning i API-projektets User Secrets (`ConnectionStrings:DefaultConnection`). User Secrets konfigureras separat på varje dator. För Supabase-pooler ska projektidentifieraren sitta i `Username=postgres.<projekt-id>`, medan databasnamnet är `Database=postgres`.
 
-Den nya modellen kräver migrationen `DailyRestaurantOrders`. Kör från lösningens katalog mot avsedd databas:
+Den nya modellen kräver även migrationen `CompletedOrderHistory`. Kör från lösningens katalog mot avsedd databas:
 
 ```powershell
 dotnet tool restore
@@ -31,7 +33,17 @@ Migrationer körs inte automatiskt vid start. Tidigare beställningar bevaras i 
 
 Migrationen `SeedAlaCarteExamples` lägger till de fyra À la carte-rätterna och priserna från wireframen som **exempeldata**, inte som verifierad meny för Sperring. Byt till restaurangens riktiga meny när den finns. Sås- och dryckesvalen är också en första fast lista; inga obekräftade tilläggspriser räknas ut.
 
-## Deadline
+## Historik för årsstatistik
+
+Efter hämtning rensas dagens lista i vyn: beställningar, drycker och hämtarval döljs och ersätts av en kort bekräftelse. Detta gäller även efter uppdatering eller återbesök. Beställningarna och historiken behålls i databasen, och dagen är fortsatt låst.
+
+`CompletedOrderDays` sparar en oföränderlig ögonblicksbild per restaurang och svenskt datum: restaurangnamn/typ, hämtningstid (UTC), unika hämtarnamn i `CollectorsJson` och alla beställningsuppgifter i `OrdersJson`. Där finns antal, rätt, sås, dryck, beställare, kommentar och styckpris. Ett nytt kalenderdygn får en ny lista; historiken ligger kvar. Upprepade avslut skapar inga dubbletter. Ändringar och avslut samordnas med en databastransaktion och ett gemensamt radlås per restaurang.
+
+Underlaget kan användas för antal pizzor, populäraste såser/drycker, summan av antal × styckpris och antal hämtningsdagar per namn. Priset sparas vid beställning (eller byte av rätt); vanliga ändringar uppdaterar inte priset. Tidigare beställningar har okänt pris (`null`), inte noll kronor. Priset avser menyrätten; extra avgifter för såser/drycker modelleras ännu inte. Namn är fritext, så olika stavningar räknas som olika personer. Någon separat vy för årsstatistik ingår ännu inte.
+
+Nya rutter: `PUT /api/restaurants/{restaurantId}/orders/{id}/collector` och `POST /api/restaurants/{restaurantId}/orders/complete`. Avslutet skickar datum och alla visade orderrevisioner; en ändrad lista måste hämtas igen.
+
+## Deadline och låsning
 
 Pizzerians deadline är **11:15 i Europe/Stockholm**, med automatisk hantering av sommar- och vintertid. Dagen bestäms också i svensk tid. À la carte har ingen deadline.
 

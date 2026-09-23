@@ -126,6 +126,32 @@ public class HomeTests : TestContext
         page.WaitForAssertion(() => Assert.Equal((1, 1, orders.Existing.Revision), orders.Deleted));
     }
 
+    [Fact]
+    public void Drinks_are_totaled_and_collecting_locks_the_day()
+    {
+        orders.Existing.Name = "Anna";
+        orders.Existing.Quantity = 3;
+        var page = RenderComponent<Home>();
+        page.Find("[data-restaurant='1']").Click();
+        Assert.Contains("3 × Vatten", page.Find("[data-list='drinks']").TextContent);
+        Assert.DoesNotContain("Vesuvio", page.Find(".summary-box").TextContent);
+        Assert.True(page.Find("[data-action='complete']").HasAttribute("disabled"));
+        page.Find("[data-collector='1']").Change(true);
+        page.Find("[data-action='complete']").Click();
+        page.WaitForAssertion(() => Assert.Contains("Hämtad och sparad i historiken", page.Markup));
+        Assert.Empty(page.FindAll("#daily-list .order-row, #daily-list .summary-box, #daily-list details, [data-action='complete']"));
+        Assert.Equal("0", page.Find(".list-link span").TextContent);
+        Assert.DoesNotContain("Ingen har beställt ännu", page.Markup);
+        page.Find("#daily-list .btn-outline-primary").Click();
+        page.WaitForAssertion(() => Assert.Contains("Dagens lista är rensad", page.Markup));
+        Assert.Empty(page.FindAll("#daily-list .order-row, #daily-list details"));
+        // Returning to the restaurant reads persisted completion, not local UI state.
+        page.Find("[data-action='restaurants']").Click();
+        page.Find("[data-restaurant='1']").Click();
+        page.WaitForAssertion(() => Assert.Contains("Dagens lista är rensad", page.Markup));
+        Assert.Empty(page.FindAll("#daily-list .order-row, #daily-list details"));
+    }
+
     private class FakeRestaurants : IRestaurantApiService
     {
         public Task<List<Restaurant>> GetRestaurantsAsync() => Task.FromResult<List<Restaurant>>([
@@ -137,6 +163,11 @@ public class HomeTests : TestContext
 
     private class FakeOrders : IOrderApiService
     {
+        public Task<DailyOrderList> SetCollectorAsync(int restaurantId, int id, CollectorInput input)
+        { Existing.CanCollect = input.CanCollect; return GetTodayAsync(restaurantId); }
+        public async Task<DailyOrderList> CompleteAsync(int restaurantId, CompleteDayInput input)
+        { Completed = true; return await GetTodayAsync(restaurantId); }
+        public bool Completed;
         public bool Locked;
         public bool FailSave;
         public OrderInput? Saved;
@@ -145,7 +176,9 @@ public class HomeTests : TestContext
         public (int, int, Guid)? Deleted;
         public OrderDetails Existing = new() { Id = 1, RestaurantId = 1, MenuItemId = 2, Pizza = "Vesuvio", Sauce = "Ingen sås", Drink = "Vatten", Revision = Guid.NewGuid() };
         public Task<DailyOrderList> GetTodayAsync(int id) => Task.FromResult(new DailyOrderList
-        { Date = new(2026, 9, 22), IsPizzeria = id == 1, IsLocked = Locked, Orders = id == 1 ? [Existing] : [] });
+        { Date = new(2026, 9, 22), IsPizzeria = id == 1, IsLocked = Locked || Completed,
+          CollectedAt = Completed ? DateTime.UtcNow : null, CollectedBy = Completed ? [Existing.Name] : [],
+          Orders = id == 1 ? [Existing] : [] });
         public Task<OrderDetails> SaveAsync(int restaurantId, OrderInput input, int? id = null)
         {
             if (FailSave) throw new HttpRequestException("Offline");

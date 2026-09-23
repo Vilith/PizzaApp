@@ -2,6 +2,8 @@
 {
     public class PizzaOrder
     {
+        public decimal? UnitPrice { get; set; }
+        public bool CanCollect { get; set; }
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Pizza { get; set; } = string.Empty;

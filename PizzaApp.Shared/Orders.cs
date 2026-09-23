@@ -25,6 +25,8 @@ public class OrderInput
 
 public class OrderDetails : OrderInput
 {
+    public decimal? UnitPrice { get; set; }
+    public bool CanCollect { get; set; }
     public int Id { get; set; }
     public int RestaurantId { get; set; }
     public string Pizza { get; set; } = "";
@@ -36,6 +38,8 @@ public record OrderSummary(string Pizza, string? Sauce, string? Drink, string? C
 
 public class DailyOrderList
 {
+    public DateTime? CollectedAt { get; set; }
+    public List<string> CollectedBy { get; set; } = [];
     public DateOnly Date { get; set; }
     public bool IsPizzeria { get; set; }
     public string Deadline { get; set; } = "11:15";
@@ -44,3 +48,6 @@ public class DailyOrderList
     public List<OrderDetails> Orders { get; set; } = [];
     public List<OrderSummary> Summary { get; set; } = [];
 }
+
+public record CollectorInput(bool CanCollect, Guid Revision, DateOnly Date);
+public record CompleteDayInput(DateOnly Date, Dictionary<int, Guid> Revisions);

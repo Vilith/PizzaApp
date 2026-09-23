@@ -48,6 +48,9 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .empty-list { padding: 35px 0; color: #697d94; }
 .summary-box { border-radius: 10px; background: #eff5fd; padding: 22px; margin: 24px 0; }
 .summary-box > p { color: #617895; font-size: 13px; }
+.collector-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #d8e4f3; cursor: pointer; }
+.collector-row input { width: 20px; height: 20px; flex-shrink: 0; accent-color: #2166b4; }
+.completion-box { margin-top: 24px; padding-top: 20px; border-top: 1px solid #e3eaf2; }
 .summary-row { display: flex; flex-direction: column; padding: 12px 0; border-top: 1px solid #d8e4f3; gap: 4px; }
 .summary-row > span { font-size: 14px; color: #47617e; }
 .individual-orders > summary { font-weight: 650; padding: 10px 0; }

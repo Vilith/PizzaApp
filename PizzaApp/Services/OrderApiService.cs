@@ -9,6 +9,20 @@ public class OrderApiService(HttpClient httpClient) : IOrderApiService
 {
     private static string Url(int restaurantId) => $"api/restaurants/{restaurantId}/orders";
 
+    public async Task<DailyOrderList> SetCollectorAsync(int restaurantId, int id, CollectorInput input)
+    {
+        using var response = await httpClient.PutAsJsonAsync($"{Url(restaurantId)}/{id}/collector", input);
+        await EnsureSuccess(response);
+        return await response.Content.ReadFromJsonAsync<DailyOrderList>() ?? throw new HttpRequestException("Servern returnerade ingen lista.");
+    }
+
+    public async Task<DailyOrderList> CompleteAsync(int restaurantId, CompleteDayInput input)
+    {
+        using var response = await httpClient.PostAsJsonAsync($"{Url(restaurantId)}/complete", input);
+        await EnsureSuccess(response);
+        return await response.Content.ReadFromJsonAsync<DailyOrderList>() ?? throw new HttpRequestException("Servern returnerade ingen lista.");
+    }
+
     public async Task<DailyOrderList> GetTodayAsync(int restaurantId)
     {
         using var response = await httpClient.GetAsync(Url(restaurantId));

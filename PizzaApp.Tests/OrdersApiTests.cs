@@ -102,6 +102,22 @@ public class OrdersApiTests
 
     private static OrderInput Pizza() => new() { MenuItemId = 2, Sauce = "Ingen sås", Drink = "Vatten" };
 
+    [Fact]
+    public async Task Client_can_assign_collector_and_complete_day_without_duplicate_history()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        var api = new PizzaApp.Services.OrderApiService(client);
+        var input = Pizza(); input.Name = "Anna";
+        var order = await api.SaveAsync(1, input);
+        var day = await api.SetCollectorAsync(1, order.Id, new(true, order.Revision, order.OrderDate));
+        var request = new CompleteDayInput(day.Date, day.Orders.ToDictionary(o => o.Id, o => o.Revision));
+        var completed = await api.CompleteAsync(1, request);
+        Assert.NotNull(completed.CollectedAt);
+        Assert.Equal(completed.CollectedAt, (await api.CompleteAsync(1, request)).CollectedAt);
+        Assert.Equal("Anna", Assert.Single(completed.CollectedBy));
+        await Assert.ThrowsAsync<PizzaApp.Services.OrderApiException>(() => api.SaveAsync(1, Pizza()));
+    }
+
     private sealed class TestApp(bool locked = false) : WebApplicationFactory<Program>
     {
         private readonly SqliteConnection connection = new("Data Source=:memory:");

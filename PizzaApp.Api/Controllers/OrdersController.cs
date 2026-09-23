@@ -16,6 +16,14 @@ public class OrdersController(OrderService service) : ControllerBase
     public Task<ActionResult<OrderDetails>> Create(int restaurantId, OrderInput input) =>
         Handle(() => service.SaveAsync(restaurantId, input));
 
+    [HttpPut("{id:int}/collector")]
+    public Task<ActionResult<DailyOrderList>> SetCollector(int restaurantId, int id, CollectorInput input) =>
+        Handle(() => service.SetCollectorAsync(restaurantId, id, input));
+
+    [HttpPost("complete")]
+    public Task<ActionResult<DailyOrderList>> Complete(int restaurantId, CompleteDayInput input) =>
+        Handle(() => service.CompleteAsync(restaurantId, input));
+
     [HttpPut("{id:int}")]
     public Task<ActionResult<OrderDetails>> Update(int restaurantId, int id, OrderInput input) =>
         Handle(() => service.SaveAsync(restaurantId, input, id));

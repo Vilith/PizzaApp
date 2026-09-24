@@ -10,6 +10,7 @@ namespace PizzaApp.Api.Data
         { }
 
         public DbSet<PizzaOrder> Orders => Set<PizzaOrder>();
+        public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
         public DbSet<CompletedOrderDay> CompletedOrderDays => Set<CompletedOrderDay>();
 
         public DbSet<Restaurant> Restaurants => Set<Restaurant>();
@@ -18,6 +19,10 @@ namespace PizzaApp.Api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<UserProfile>().HasKey(p => p.UserId);
+            modelBuilder.Entity<UserProfile>().Property(p => p.DisplayName).HasMaxLength(100);
+            modelBuilder.Entity<UserProfile>().Property(p => p.AvatarDataUrl).HasMaxLength(350000);
+            modelBuilder.Entity<UserProfile>().Property(p => p.Revision).IsConcurrencyToken();
             modelBuilder.Entity<CompletedOrderDay>().HasKey(d => new { d.RestaurantId, d.Date });
             modelBuilder.Entity<CompletedOrderDay>().HasOne<Restaurant>().WithMany()
                 .HasForeignKey(d => d.RestaurantId).OnDelete(DeleteBehavior.Restrict);

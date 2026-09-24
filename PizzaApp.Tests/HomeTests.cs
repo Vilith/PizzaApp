@@ -37,7 +37,7 @@ public class HomeTests : TestContext
     }
 
     [Fact]
-    public void Saves_pizza_without_name_and_refreshes_shared_list()
+    public void Uses_profile_name_without_retyping_and_refreshes_shared_list()
     {
         var page = RenderComponent<Home>();
         page.Find("[data-restaurant='1']").Click();
@@ -49,7 +49,8 @@ public class HomeTests : TestContext
         page.WaitForAssertion(() => Assert.NotNull(orders.Saved));
         Assert.Equal(1, orders.SavedRestaurant);
         Assert.Equal(3, orders.Saved!.Quantity);
-        Assert.Equal("", orders.Saved.Name);
+        Assert.Equal("Anna", orders.Saved.Name);
+        Assert.Empty(page.FindAll("#customer-name"));
         Assert.Equal("Ingen sås", orders.Saved.Sauce);
         page.WaitForAssertion(() => Assert.Contains("Beställningen är sparad", page.Markup));
     }
@@ -174,7 +175,7 @@ public class HomeTests : TestContext
     [Fact]
     public void Members_can_only_edit_their_own_orders_and_cannot_complete_the_day()
     {
-        auth.User = new(new TestUser().Id, "anna@example.test", false);
+        auth.User = new(new TestUser().Id, "anna@example.test", false, "Anna");
         orders.Existing.OwnerUserId = Guid.NewGuid();
         orders.Existing.Name = "Annan person";
         var page = RenderComponent<Home>();
@@ -185,6 +186,25 @@ public class HomeTests : TestContext
         page.Find("#daily-list .btn-outline-primary").Click();
         page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("[data-edit='1']")));
         Assert.False(page.Find("[data-collector='1']").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void New_account_must_choose_alias_before_ordering()
+    {
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        auth.User = auth.User! with { DisplayName = "" };
+        var page = RenderComponent<Home>();
+        Assert.NotEmpty(page.FindAll("#profile-name"));
+        Assert.Empty(page.FindAll("[data-restaurant]"));
+        page.Find("#profile-name").Change("Pizzafan");
+        page.Find("form").Submit();
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("[data-restaurant='1']")));
+        Assert.Contains("Pizzafan", page.Find(".profile-identity").TextContent);
+        page.Find("[data-restaurant='1']").Click();
+        page.Find("[data-menu-item='2']").Click();
+        Assert.Contains("Pizzafan", page.Find(".order-profile-name").TextContent);
+        Assert.Empty(page.FindAll("#customer-name"));
+        Assert.Equal("/settings", page.Find("[data-action='settings']").GetAttribute("href"));
     }
 
     private class FakeRestaurants : IRestaurantApiService

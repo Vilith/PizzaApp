@@ -1,0 +1,123 @@
+@page "/settings"
+@inject IAuthService Auth
+@implements IDisposable
+
+@if (Auth.User == null)
+{
+    <Login />
+}
+else
+{
+    <section class="profile-panel" aria-labelledby="profile-heading">
+        <div class="profile-toolbar">
+            @if (!string.IsNullOrWhiteSpace(Auth.User.DisplayName)) { <a href="/">← Till beställningarna</a> }
+            <button class="btn btn-link" disabled="@busy" @onclick="SignOut">Logga ut</button>
+        </div>
+        <p class="eyebrow">MIN PROFIL</p>
+        <h1 id="profile-heading">@(string.IsNullOrWhiteSpace(Auth.User.DisplayName) ? "Välj ditt namn eller nick" : "Inställningar")</h1>
+        <p>Ditt namn eller nick används automatiskt när du beställer. Du kan ändra det här när du vill.</p>
+        <p class="account-email">@Auth.User.Email</p>
+        <EditForm Model="input" OnValidSubmit="Save" @key="input">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <fieldset disabled="@busy">
+                <label for="profile-name">Namn / nick / alias</label>
+                <InputText id="profile-name" class="form-control" maxlength="100" autocomplete="nickname" @bind-Value="input.DisplayName" />
+                <p class="hint">Tidigare beställningar behåller sitt ursprungliga namn.</p>
+                <label for="profile-photo">Profilbild <span>(valfritt)</span></label>
+                <div class="photo-preview">
+                    @if (input.AvatarDataUrl != null)
+                    { <img src="@input.AvatarDataUrl" alt="Din profilbild" width="96" height="96" /> }
+                    else { <span class="avatar-placeholder" aria-label="Ingen profilbild">☺</span> }
+                    <div>
+                        <InputFile id="profile-photo" accept="image/png,image/jpeg" OnChange="ChoosePhoto" />
+                        <p class="hint">Välj en JPG- eller PNG-bild, högst 5 MB. Bilden förminskas automatiskt.</p>
+                        @if (input.AvatarDataUrl != null)
+                        { <button type="button" class="btn btn-link" data-action="remove-photo" @onclick="RemovePhoto">Ta bort bild</button> }
+                    </div>
+                </div>
+                <div class="profile-actions">
+                    <button class="btn btn-primary" type="submit">@(busy ? "Sparar…" : "Spara profil")</button>
+                    <button class="btn btn-outline-secondary" type="button" @onclick="Reload">Hämta sparad profil</button>
+                </div>
+            </fieldset>
+        </EditForm>
+        @if (success != null) { <p class="alert alert-success mt-3" role="status">@success</p> }
+        @if (error != null) { <p class="alert alert-danger mt-3" role="alert">@error</p> }
+    </section>
+}
+
+@code {
+    private ProfileInput input = new();
+    private Guid? loadedUser;
+    private bool busy;
+    private string? error, success;
+
+    protected override void OnInitialized() { Auth.Changed += Changed; LoadInput(); }
+    private void LoadInput()
+    {
+        loadedUser = Auth.User?.Id;
+        input = new() { DisplayName = Auth.User?.DisplayName ?? "", AvatarDataUrl = Auth.User?.AvatarDataUrl,
+            Revision = Auth.User?.ProfileRevision ?? Guid.Empty };
+    }
+    private void Changed() => _ = InvokeAsync(() =>
+    {
+        if (loadedUser != Auth.User?.Id) { LoadInput(); error = success = null; }
+        StateHasChanged();
+    });
+    public void Dispose() => Auth.Changed -= Changed;
+    private static bool IsConnectionError(Exception ex) => ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException;
+
+    private async Task Save()
+    {
+        if (busy) return;
+        busy = true; error = success = null;
+        try { await Auth.UpdateProfileAsync(input); LoadInput(); success = "Din profil är sparad."; }
+        catch (AuthException ex) { error = ex.Message; }
+        catch (Exception ex) when (IsConnectionError(ex))
+        { error = "Kunde inte läsa serverns svar. Hämta sparad profil för att kontrollera om ändringen sparades."; }
+        finally { busy = false; }
+    }
+
+    private async Task Reload()
+    {
+        if (busy) return;
+        busy = true; error = success = null;
+        try { await Auth.RefreshUserAsync(); LoadInput(); }
+        catch (AuthException ex) { error = ex.Message; }
+        catch (Exception ex) when (IsConnectionError(ex)) { error = "Kunde inte hämta profilen. Försök igen."; }
+        finally { busy = false; }
+    }
+
+    private async Task ChoosePhoto(InputFileChangeEventArgs e)
+    {
+        if (busy) return;
+        error = success = null;
+        var file = e.File;
+        if (file.Size > 5 * 1024 * 1024 || file.ContentType is not ("image/png" or "image/jpeg"))
+        { error = "Välj en JPG- eller PNG-bild på högst 5 MB."; return; }
+        busy = true;
+        try
+        {
+            var thumbnail = await file.RequestImageFileAsync("image/png", 256, 256);
+            using var buffer = new MemoryStream();
+            await using var stream = thumbnail.OpenReadStream(ProfileImages.MaxBytes);
+            await stream.CopyToAsync(buffer);
+            var image = ProfileImages.Prefix + Convert.ToBase64String(buffer.ToArray());
+            if (!ProfileImages.IsValid(image)) { error = "Bilden kunde inte läsas. Välj en annan bild."; return; }
+            input.AvatarDataUrl = image;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or JSException or TaskCanceledException)
+        { error = "Bilden kunde inte läsas eller är för stor. Välj en annan bild."; }
+        finally { busy = false; }
+    }
+    private void RemovePhoto() { input.AvatarDataUrl = null; error = success = null; }
+    private async Task SignOut()
+    {
+        if (busy) return;
+        busy = true;
+        try { await Auth.SignOutAsync(); }
+        catch (Exception ex) when (IsConnectionError(ex)) { /* Local session has already been removed. */ }
+        finally { busy = false; }
+    }
+}

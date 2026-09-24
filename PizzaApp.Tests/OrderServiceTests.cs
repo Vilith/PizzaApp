@@ -23,6 +23,7 @@ public class OrderServiceTests : IDisposable
         db = new(new DbContextOptionsBuilder<PizzaDbContext>().UseSqlite(connection).Options);
         db.Database.EnsureCreated();
         db.MenuItems.Add(new MenuItem { Id = 100, Name = "Dagens rätt", Price = 100, RestaurantId = 2 });
+        db.UserProfiles.Add(new() { UserId = actor.Id, DisplayName = "Anna", Revision = Guid.NewGuid() });
         db.SaveChanges();
         service = new(db, clock, Options.Create(settings), actor);
     }
@@ -37,6 +38,8 @@ public class OrderServiceTests : IDisposable
         var input = Pizza(); input.Name = "Anna";
         var first = await service.SaveAsync(1, input);
         actor.Id = Guid.NewGuid();
+        db.UserProfiles.Add(new() { UserId = actor.Id, DisplayName = "Anna", Revision = Guid.NewGuid() });
+        await db.SaveChangesAsync();
         var second = await service.SaveAsync(1, input);
         var day = await service.SetCollectorAsync(1, second.Id, new(true, second.Revision, second.OrderDate));
         Assert.True(day.Orders.Single(o => o.Id == second.Id).CanCollect);
@@ -68,13 +71,13 @@ public class OrderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Saves_optional_name_and_uses_menu_name_and_swedish_date()
+    public async Task Uses_profile_name_menu_name_and_swedish_date()
     {
         clock.Now = DateTimeOffset.Parse("2026-09-21T22:30:00Z");
         var saved = await service.SaveAsync(1, Pizza(2));
         Assert.Equal("Vesuvio", saved.Pizza);
         Assert.Equal(new DateOnly(2026, 9, 22), saved.OrderDate);
-        Assert.Equal("", saved.Name);
+        Assert.Equal("Anna", saved.Name);
         Assert.Equal(2, saved.Quantity);
         Assert.NotEqual(Guid.Empty, saved.Revision);
     }

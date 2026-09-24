@@ -70,10 +70,15 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         var order = id.HasValue ? await EditableAsync(restaurantId, id.Value, date, input.Revision) : new PizzaOrder
         { OwnerUserId = user.Id, RestaurantId = restaurantId, OrderDate = date, CreatedAt = clock.GetUtcNow().UtcDateTime };
         if (!id.HasValue || order.MenuItemId != item.Id) order.UnitPrice = item.Price;
-        if (order.Name != input.Name?.Trim()) order.CanCollect = false;
+        if (!id.HasValue)
+        {
+            var profile = await db.UserProfiles.AsNoTracking().SingleOrDefaultAsync(p => p.UserId == user.Id);
+            if (profile == null || string.IsNullOrWhiteSpace(profile.DisplayName))
+                throw new OrderException(409, "Välj ditt namn eller nick under Inställningar innan du beställer.");
+            order.Name = profile.DisplayName;
+        }
         order.MenuItemId = item.Id;
         order.Pizza = item.Name;
-        order.Name = input.Name?.Trim() ?? "";
         order.Comment = string.IsNullOrWhiteSpace(input.Comment) ? null : input.Comment.Trim();
         order.Quantity = input.Quantity;
         order.Sauce = input.Sauce;

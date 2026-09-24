@@ -1,0 +1,12 @@
+.profile-panel { max-width: 650px; margin: 24px auto; padding: 28px; background: white; border: 1px solid #dce4ed; border-radius: 14px; }
+.profile-toolbar, .profile-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.profile-toolbar { margin-bottom: 24px; }
+.eyebrow { color: #52749a; font-size: 11px; font-weight: 750; letter-spacing: 1.7px; }
+h1 { font-size: 28px; font-weight: 750; }
+label { display: block; font-weight: 600; margin: 22px 0 8px; }
+.hint, .account-email, label span { font-size: 13px; color: #617895; margin-top: 8px; }
+.photo-preview { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.photo-preview img, .avatar-placeholder { border-radius: 50%; width: 96px; height: 96px; object-fit: cover; }
+.avatar-placeholder { display: grid; place-items: center; background: #edf4fd; color: #52749a; font-size: 40px; }
+.profile-actions { margin-top: 28px; justify-content: flex-start; }
+@media (max-width: 480px) { .profile-panel { padding: 18px; } .photo-preview { gap: 12px; } }

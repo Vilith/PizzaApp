@@ -114,6 +114,58 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         finally { gate.Release(); }
     }
 
+    public async Task UpdateProfileAsync(ProfileInput input)
+    {
+        await GetAccessTokenAsync();
+        await gate.WaitAsync();
+        try
+        {
+            if (tokens == null || User == null) throw new AuthException("Logga in för att fortsätta.");
+            var version = sessionVersion;
+            using var request = new HttpRequestMessage(HttpMethod.Put, "api/auth/profile");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+            request.Content = JsonContent.Create(input);
+            using var response = await clients.CreateClient("PublicApi").SendAsync(request);
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            { ClearSession(); throw new AuthException("Din inloggning har gått ut. Logga in igen."); }
+            if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Conflict or HttpStatusCode.Forbidden or HttpStatusCode.RequestEntityTooLarge)
+            {
+                // Problem responses are available for validation/conflict; never expose provider internals.
+                if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Conflict)
+                {
+                    var problem = await response.Content.ReadFromJsonAsync<ProfileProblem>();
+                    throw new AuthException(problem?.Detail ?? "Kontrollera profilen och försök igen.");
+                }
+                throw new AuthException("Profilen kunde inte sparas. Kontrollera behörigheten och bildens storlek.");
+            }
+            response.EnsureSuccessStatusCode();
+            var updated = await response.Content.ReadFromJsonAsync<SignedInUser>()
+                ?? throw new AuthException("Profilens svar kunde inte läsas. Hämta profilen igen.");
+            if (version != sessionVersion) throw new AuthException("Inloggningen har ändrats. Logga in igen.");
+            User = updated;
+            Changed?.Invoke();
+        }
+        finally { gate.Release(); }
+    }
+
+    public async Task RefreshUserAsync()
+    {
+        await GetAccessTokenAsync();
+        await gate.WaitAsync();
+        try
+        {
+            if (tokens == null || User == null) throw new AuthException("Logga in för att fortsätta.");
+            var version = sessionVersion;
+            var updated = await LoadUserAsync(tokens.AccessToken);
+            if (version != sessionVersion) return;
+            User = updated;
+            Changed?.Invoke();
+        }
+        finally { gate.Release(); }
+    }
+
+    private sealed class ProfileProblem { public string? Detail { get; set; } }
+
     public void ClearSession()
     {
         Interlocked.Increment(ref sessionVersion);

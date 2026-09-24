@@ -75,6 +75,22 @@ public class AuthServiceTests
         Assert.Equal(clearsSession, auth.User == null);
     }
 
+    [Fact]
+    public async Task Profile_save_refreshes_cached_user_and_rejected_save_keeps_previous_profile()
+    {
+        var backend = new Backend();
+        var auth = new AuthService(backend);
+        await auth.SignInAsync("anna@example.test", "password");
+        await auth.UpdateProfileAsync(new() { DisplayName = "Pizzafan", AvatarDataUrl = TestProfileImage.Png });
+        Assert.Equal("Pizzafan", auth.User!.DisplayName);
+        Assert.Equal(TestProfileImage.Png, auth.User.AvatarDataUrl);
+        backend.RejectProfileUpdate = true;
+        await Assert.ThrowsAsync<AuthException>(() => auth.UpdateProfileAsync(new() { DisplayName = "Fel" }));
+        Assert.Equal("Pizzafan", auth.User!.DisplayName);
+        await auth.RefreshUserAsync();
+        Assert.Equal("Pizzafan", auth.User!.DisplayName);
+    }
+
     private sealed class ResponseHandler(HttpStatusCode status) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -91,6 +107,8 @@ public class AuthServiceTests
         public int RefreshCalls;
         public bool RejectPassword, RejectProfile, RejectRefresh, FailLogout, LoggedOut;
         public Action? OnRefresh;
+        public bool RejectProfileUpdate;
+        private SignedInUser profile = new(new TestUser().Id, "anna@example.test", false);
         public HttpClient CreateClient(string name) => new(this, disposeHandler: false) { BaseAddress = new("https://api.example.test/") };
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -99,8 +117,9 @@ public class AuthServiceTests
             if (path == "/api/auth/me")
             {
                 Assert.NotNull(request.Headers.Authorization);
-                return RejectProfile ? Status(HttpStatusCode.Unauthorized) : Json(new SignedInUser(new TestUser().Id, "anna@example.test", false));
+                return RejectProfile ? Status(HttpStatusCode.Unauthorized) : Json(profile);
             }
+            if (path == "/api/auth/profile") return UpdateProfile(request);
             Assert.Equal("sb_publishable_test", Assert.Single(request.Headers.GetValues("apikey")));
             if (path.Contains("grant_type=password"))
                 return RejectPassword ? Status(HttpStatusCode.BadRequest) : Json(new { access_token = "login-token", refresh_token = "refresh-secret", expires_in = ExpiresIn });
@@ -115,6 +134,15 @@ public class AuthServiceTests
                 return Status(FailLogout ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.NoContent);
             }
             throw new InvalidOperationException("Unexpected test request: " + path);
+        }
+        private async Task<HttpResponseMessage> UpdateProfile(HttpRequestMessage request)
+        {
+            Assert.Equal(HttpMethod.Put, request.Method);
+            Assert.NotNull(request.Headers.Authorization);
+            if (RejectProfileUpdate) return new(HttpStatusCode.Conflict) { Content = JsonContent.Create(new { detail = "Profilen har ändrats." }) };
+            var input = (await request.Content!.ReadFromJsonAsync<ProfileInput>())!;
+            profile = profile with { DisplayName = input.DisplayName, AvatarDataUrl = input.AvatarDataUrl, ProfileRevision = Guid.NewGuid() };
+            return await Json(profile);
         }
         private static Task<HttpResponseMessage> Json(object value) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(value) });
         private static Task<HttpResponseMessage> Status(HttpStatusCode code) => Task.FromResult(new HttpResponseMessage(code));

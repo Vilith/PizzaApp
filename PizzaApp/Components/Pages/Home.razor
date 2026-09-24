@@ -8,10 +8,18 @@
 {
     <Login />
 }
+else if (string.IsNullOrWhiteSpace(Auth.User.DisplayName))
+{
+    <ProfileSettings />
+}
 else
 {
 <div class="restaurant-toolbar">
-    <span>@Auth.User.Email · @(Auth.User.IsAdmin ? "Administratör" : "Användare")</span>
+    <span class="profile-identity">
+        @if (Auth.User.AvatarDataUrl != null) { <img src="@Auth.User.AvatarDataUrl" alt="Din profilbild" width="36" height="36" /> }
+        @Auth.User.DisplayName · @(Auth.User.IsAdmin ? "Administratör" : "Användare")
+    </span>
+    <a href="/settings" data-action="settings">Inställningar</a>
     <button class="text-button" data-action="logout" disabled="@(busy || loading)" @onclick="SignOut">Logga ut</button>
 </div>
 
@@ -119,7 +127,7 @@ else
                             }
                             <div class="form-row">
                                 <div><label for="quantity">Antal</label><InputNumber id="quantity" class="form-control" @bind-Value="input.Quantity" min="1" max="99" /></div>
-                                <div><label for="customer-name">Namn <span>(valfritt)</span></label><InputText id="customer-name" class="form-control" @bind-Value="input.Name" maxlength="100" /></div>
+                                <div><label>Beställare</label><p class="order-profile-name">@(editingId.HasValue ? input.Name : Auth.User.DisplayName)</p></div>
                             </div>
                             <label for="comment">Kommentar <span>(valfritt)</span></label>
                             <InputTextArea id="comment" class="form-control" @bind-Value="input.Comment" maxlength="500" placeholder="Till exempel utan lök" />
@@ -237,8 +245,9 @@ else
             loadedUser = Auth.User?.Id;
             restaurant = null; daily = null; input = null; menu = []; restaurants = [];
             editingId = deleteId = null; error = success = null;
-            if (Auth.User != null) await LoadRestaurants();
+            loading = false;
         }
+        if (Auth.User is { DisplayName.Length: > 0 } && restaurants.Count == 0 && !loading) await LoadRestaurants();
         StateHasChanged();
     });
 
@@ -267,7 +276,7 @@ else
     {
         Auth.Changed += AuthChanged;
         loadedUser = Auth.User?.Id;
-        if (Auth.User != null) await LoadRestaurants();
+        if (!string.IsNullOrWhiteSpace(Auth.User?.DisplayName)) await LoadRestaurants();
         else loading = false;
     }
 
@@ -338,7 +347,7 @@ else
     private void SelectItem(MenuItem item)
     {
         if (busy || daily?.IsLocked != false) return;
-        if (input == null) input = new();
+        if (input == null) input = new() { Name = Auth.User?.DisplayName ?? "" };
         input.MenuItemId = item.Id;
         error = success = null;
     }

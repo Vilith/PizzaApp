@@ -16,6 +16,9 @@ h3 { font-size: 18px; font-weight: 700; }
 .info-note { padding: 22px 0; color: #65788e; font-size: 14px; }
 .restaurant-toolbar, .page-heading, .list-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .restaurant-toolbar { margin-bottom: 30px; }
+.profile-identity { display: flex; align-items: center; gap: 10px; }
+.profile-identity img { border-radius: 50%; object-fit: cover; }
+.order-profile-name { padding: 10px 0; margin: 0; }
 .restaurant-label { font-size: 12px; background: #e6eef9; padding: 6px 12px; border-radius: 30px; color: #315f94; }
 .page-heading { margin-bottom: 20px; }
 .text-button { color: #2166b4; border: 0; background: none; padding: 8px 0; font-weight: 600; font-size: 14px; }

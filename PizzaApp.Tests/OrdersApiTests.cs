@@ -148,6 +148,10 @@ public class OrdersApiTests
             var host = base.CreateHost(builder);
             using var scope = host.Services.CreateScope();
             scope.ServiceProvider.GetRequiredService<PizzaDbContext>().Database.EnsureCreated();
+            var db = scope.ServiceProvider.GetRequiredService<PizzaDbContext>();
+            foreach (var id in new[] { new TestUser().Id, Guid.Parse("22222222-2222-2222-2222-222222222222"), Guid.Parse("33333333-3333-3333-3333-333333333333") })
+                db.UserProfiles.Add(new() { UserId = id, DisplayName = "Anna", Revision = Guid.NewGuid() });
+            db.SaveChanges();
             return host;
         }
         protected override void Dispose(bool disposing) { base.Dispose(disposing); if (disposing) connection.Dispose(); }
@@ -163,10 +167,11 @@ public class OrdersApiTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var token = request.Headers.Authorization?.Parameter;
-            if (token is not ("admin" or "member" or "other" or "forged-admin" or "unapproved"))
+            if (token is not ("admin" or "member" or "other" or "forged-admin" or "unapproved" or "new-member"))
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
             var role = token == "admin" ? "admin" : token == "unapproved" ? null : "member";
-            var id = token == "admin" ? Guid.Parse("33333333-3333-3333-3333-333333333333")
+            var id = token == "new-member" ? Guid.Parse("44444444-4444-4444-4444-444444444444")
+                : token == "admin" ? Guid.Parse("33333333-3333-3333-3333-333333333333")
                 : token == "other" ? Guid.Parse("22222222-2222-2222-2222-222222222222") : new TestUser().Id;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -192,6 +197,7 @@ public class OrdersApiTests
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(path)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/restaurants/1/orders", Pizza())).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.DeleteAsync("/api/restaurants/1/orders/1")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PutAsJsonAsync("/api/auth/profile", new ProfileInput { DisplayName = "Nick" })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/auth/config")).StatusCode);
     }
 
@@ -221,5 +227,66 @@ public class OrdersApiTests
         client.DefaultRequestHeaders.Authorization = new("Bearer", "admin");
         Assert.NotEqual(order.OwnerUserId, (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.Id);
         Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync($"/api/restaurants/1/orders/{order.Id}", input)).StatusCode);
+    }
+
+    [Fact]
+    public async Task First_login_requires_profile_then_orders_use_persisted_alias_and_changes_preserve_old_orders()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "new-member");
+        var user = (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!;
+        Assert.Equal("", user.DisplayName);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/api/restaurants/1/orders", Pizza())).StatusCode);
+        var response = await client.PutAsJsonAsync("/api/auth/profile", new { DisplayName = "  Pizzakungen  ", AvatarDataUrl = TestProfileImage.Png,
+            Revision = Guid.Empty, UserId = new TestUser().Id, IsAdmin = true });
+        response.EnsureSuccessStatusCode();
+        user = (await response.Content.ReadFromJsonAsync<SignedInUser>())!;
+        Assert.Equal("Pizzakungen", user.DisplayName);
+        Assert.Equal(TestProfileImage.Png, user.AvatarDataUrl);
+        Assert.False(user.IsAdmin);
+        var input = Pizza(); input.Name = "Någon annan";
+        var created = await client.PostAsJsonAsync("/api/restaurants/1/orders", input);
+        created.EnsureSuccessStatusCode();
+        var first = (await created.Content.ReadFromJsonAsync<OrderDetails>())!;
+        Assert.Equal("Pizzakungen", first.Name);
+        var savedProfile = new ProfileInput { DisplayName = "Nytt nick", Revision = user.ProfileRevision, AvatarDataUrl = null };
+        (await client.PutAsJsonAsync("/api/auth/profile", savedProfile)).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PutAsJsonAsync("/api/auth/profile", savedProfile)).StatusCode);
+        var persisted = (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!;
+        Assert.Equal("Nytt nick", persisted.DisplayName);
+        Assert.Null(persisted.AvatarDataUrl);
+        var next = await client.PostAsJsonAsync("/api/restaurants/1/orders", input);
+        Assert.Equal("Nytt nick", (await next.Content.ReadFromJsonAsync<OrderDetails>())!.Name);
+        input.Revision = first.Revision;
+        var edited = await client.PutAsJsonAsync($"/api/restaurants/1/orders/{first.Id}", input);
+        Assert.Equal("Pizzakungen", (await edited.Content.ReadFromJsonAsync<OrderDetails>())!.Name);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "member");
+        Assert.Equal("Anna", (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.DisplayName);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("Ett\nnamn")]
+    public async Task Blank_or_multiline_nickname_is_rejected(string name)
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        var user = (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!;
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync("/api/auth/profile",
+            new ProfileInput { DisplayName = name, Revision = user.ProfileRevision })).StatusCode);
+        Assert.Equal("Anna", (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.DisplayName);
+    }
+
+    [Fact]
+    public async Task Invalid_images_and_too_long_names_are_rejected_without_modifying_profile()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        var user = (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!;
+        foreach (var image in new[] { "https://example.test/tracking.png", "data:image/svg+xml,<svg></svg>", "data:image/png;base64,broken", new string('x', ProfileImages.MaxDataUrlLength + 1) })
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync("/api/auth/profile",
+                new ProfileInput { DisplayName = "Nick", AvatarDataUrl = image, Revision = user.ProfileRevision })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync("/api/auth/profile",
+            new ProfileInput { DisplayName = new string('x', 101), Revision = user.ProfileRevision })).StatusCode);
+        Assert.Equal("Anna", (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.DisplayName);
     }
 }

@@ -45,6 +45,8 @@ API:t hämtar aktuell roll vid varje anrop. Appens rollindikering uppdateras vid
 
 Kontohantering och lösenordsåterställning sköts tills vidare av projektadministratören i Supabase; appen har ingen registreringssida, kontoadministration eller hantering av inbjudnings-/återställningslänkar. Använd **Create new user**, inte ett inbjudningsflöde som förutsätter en callback-sida som appen ännu inte har.
 
+När ett godkänt konto loggar in första gången slutför användaren sin profil genom att välja namn/nick/alias. Profilnamnet är obligatoriskt även för befintliga konton som ännu saknar profil. Inställningssidan (`/settings`) kan sedan användas för att ändra nick eller välja/ta bort profilbild. Inloggningsadressen och rollen ändras inte av profilinställningarna.
+
 ## 4. Databas och appadress
 
 ```powershell
@@ -52,6 +54,12 @@ dotnet ef database update --project PizzaApp.Api -- --environment Development
 ```
 
 `OrderOwnership` lägger till `OwnerUserId`. Äldre beställningar får ingen gissad ägare och kan bara ändras av administratörer. Historiken bevaras.
+
+Den senaste migrationen, `UserProfiles`, skapar en separat profiltabell med användar-id, nick, bildminiatyr och versionsmarkör. Kör även denna migration innan du startar den nya versionen. Profilen kopplas alltid till det verifierade kontot; `PUT /api/auth/profile` accepterar aldrig en annan användares id eller någon roll. API:t hämtar nick från databasen när en ny beställning skapas och ignorerar det gamla klientfältet `Name`. Vid redigering behålls orderns ursprungliga namn, även när en admin ändrar någon annans order.
+
+Profilbilder väljs som JPG/PNG på högst 5 MB, förminskas till högst 256 × 256 pixlar i appen och lagras som PNG-miniatyrer på högst 256 kB. Servern kontrollerar storlek, PNG-struktur och mått; externa bildlänkar och SVG accepteras inte. Ingen separat Storage-bucket behövs. Bilderna ligger inte i JWT eller Supabase Auth-metadata. `GET /api/auth/me` returnerar den egna profilen och profilbilder visas i inställningar och vid den inloggade användarens namn. Andras profilbilder delas inte via dagens beställningslista.
+
+`UserProfiles` får samma RLS-skydd och indragna direktbehörigheter för `PUBLIC`, `anon` och `authenticated` som övriga apptabeller. Endast backendens databasroll får åtkomst. Versionskontrollen ger 409 vid samtidiga profiländringar; **Hämta sparad profil** laddar om den senaste profilen innan man försöker igen.
 
 Migrationen aktiverar RLS och tar bort direktbehörighet för `PUBLIC`, `anon` och `authenticated` på `Orders`, `CompletedOrderDays`, `Restaurants` och `MenuItems`. Därmed kan Supabases publika Data API inte kringgå .NET-API:ts regler, även om tabellerna ligger i `public`. API:ts databasanslutning ska använda tabellägaren eller en särskild betrodd backend-roll som kan läsa/skriva dessa tabeller trots RLS; använd inte `anon`/`authenticated`. Migrationens `Down` återöppnar avsiktligt inte direktåtkomsten. Detta skydd ingår i den genererade PostgreSQL-migrationen; kör den före publicering.
 

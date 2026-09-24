@@ -20,5 +20,6 @@
     <Compile Include="../PizzaApp/Services/*.cs" Link="Services/%(Filename)%(Extension)" />
     <RazorComponent Include="../PizzaApp/Components/_Imports.razor" Link="Components/_Imports.razor" />
     <RazorComponent Include="../PizzaApp/Components/Pages/Home.razor" Link="Components/Pages/Home.razor" />
+    <RazorComponent Include="../PizzaApp/Components/Pages/Login.razor" Link="Components/Pages/Login.razor" />
   </ItemGroup>
 </Project>

@@ -2,6 +2,7 @@
 {
     public class PizzaOrder
     {
+        public Guid? OwnerUserId { get; set; }
         public decimal? UnitPrice { get; set; }
         public bool CanCollect { get; set; }
         public int Id { get; set; }

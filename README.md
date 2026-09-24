@@ -2,24 +2,26 @@
 
 MAUI/Blazor-app med två restauranger och en separat gemensam beställningslista per restaurang och dag.
 
+Inloggning krävs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för Supabase-konfiguration, användarkonton, adminroller och databasbehörigheter före publicering.
+
 ## Flöde
 
-- Välj Pizzeria (Kvänum Pizzeria) eller À la carte (Sperring).
+- Logga in med e-post och lösenord för ett godkänt konto och välj Pizzeria (Kvänum Pizzeria) eller À la carte (Sperring).
 - Pizzeria: välj pizza, sås (inklusive Ingen sås), dryck och antal.
 - À la carte: välj rätt och antal, utan sås- eller dryckesval.
 - Namn och kommentar är valfria. Spara direkt i restaurangens dagslista.
-- ”Att ringa in” visar beställarnas namn med kryssrutor för vilka som kan hämta. Samma namn (oberoende av stora/små bokstäver) visas en gång. Namnlösa beställningar behöver ett namn innan de kan väljas som hämtare.
+- ”Att ringa in” visar beställarnas namn med kryssrutor för vilka som kan hämta. Samma konto och namn visas en gång; olika konton hålls isär även om namnet är samma. Namnlösa beställningar behöver ett namn innan de kan väljas som hämtare.
 - ”Alla drycker” är en egen utfällbar lista med antal per dryck. Varje portion räknas som en dryck. ”Alla beställningar” visar fortfarande rätter, tillval och kommentarer.
-- När maten är hämtad: låt de faktiska hämtarna vara ikryssade och tryck ”Pizzorna är hämtade” (”Maten är hämtad” för À la carte). Dagen låses och sparas i historiken. Minst en namngiven hämtare krävs. Hämtare kan väljas även efter deadline.
+- När maten är hämtad: en administratör låter de faktiska hämtarna vara ikryssade och trycker ”Pizzorna är hämtade” (”Maten är hämtad” för À la carte). Dagen låses och sparas i historiken. Minst en namngiven hämtare krävs. Hämtare kan väljas även efter deadline.
 - Ändra en beställning med Ändra och spara formuläret. Borttagning kräver bekräftelse.
 - Uppdatera listan för att hämta andras senaste beställningar. Tidpunkten för senaste hämtning visas. Vid samtidiga ändringar måste den senaste versionen hämtas och öppnas med Ändra igen.
-- Ingen inloggning krävs. Listorna är gemensamma och kan redigeras av dem som använder appen. Appen skickar inte beställningar till restaurangerna.
+- Godkända användare ser den gemensamma listan och kan skapa och ändra sina egna beställningar. Administratörer kan även ändra andras beställningar och avsluta dagen. Appen skickar inte beställningar till restaurangerna.
 
 ## Köra lokalt på Windows
 
 Förutsätter .NET 9, MAUI Windows och databasanslutning i API-projektets User Secrets (`ConnectionStrings:DefaultConnection`). User Secrets konfigureras separat på varje dator. För Supabase-pooler ska projektidentifieraren sitta i `Username=postgres.<projekt-id>`, medan databasnamnet är `Database=postgres`.
 
-Den nya modellen kräver även migrationen `CompletedOrderHistory`. Kör från lösningens katalog mot avsedd databas:
+Den nya modellen kräver migrationerna till och med `OrderOwnership`. Konfigurera även Supabase Auth enligt nedan. Kör från lösningens katalog mot avsedd databas:
 
 ```powershell
 dotnet tool restore

@@ -120,12 +120,20 @@ public class OrdersApiTests
 
     private sealed class TestApp(bool locked = false) : WebApplicationFactory<Program>
     {
+        public new HttpClient CreateClient()
+        {
+            var client = base.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new("Bearer", "admin");
+            return client;
+        }
         private readonly SqliteConnection connection = new("Data Source=:memory:");
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Testing");
             builder.ConfigureServices(services =>
             {
+                services.Configure<SupabaseOptions>(o => { o.Url = "https://auth.example.test"; o.PublishableKey = "sb_publishable_test"; });
+                services.AddHttpClient("SupabaseVerification").ConfigurePrimaryHttpMessageHandler(() => new AuthServer());
                 services.RemoveAll<DbContextOptions<PizzaDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<PizzaDbContext>>();
                 services.RemoveAll<TimeProvider>();
@@ -148,5 +156,70 @@ public class OrdersApiTests
     private sealed class FixedClock : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => DateTimeOffset.Parse("2026-09-22T12:00:00Z");
+    }
+
+    private sealed class AuthServer : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var token = request.Headers.Authorization?.Parameter;
+            if (token is not ("admin" or "member" or "other" or "forged-admin" or "unapproved"))
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+            var role = token == "admin" ? "admin" : token == "unapproved" ? null : "member";
+            var id = token == "admin" ? Guid.Parse("33333333-3333-3333-3333-333333333333")
+                : token == "other" ? Guid.Parse("22222222-2222-2222-2222-222222222222") : new TestUser().Id;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new
+                {
+                    id, email = "person@example.test", email_confirmed_at = "2026-09-01T12:00:00Z",
+                    app_metadata = new { pizza_role = role }, user_metadata = new { pizza_role = "admin" }, is_anonymous = false
+                })
+            });
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("invalid-token")]
+    [InlineData("expired-token")]
+    [InlineData("unapproved")]
+    public async Task Anonymous_invalid_and_unapproved_users_cannot_read_or_write(string? token)
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        client.DefaultRequestHeaders.Authorization = token == null ? null : new("Bearer", token);
+        foreach (var path in new[] { "/api/restaurants", "/api/restaurants/1/menu", "/api/restaurants/1/orders", "/api/auth/me" })
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(path)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/restaurants/1/orders", Pizza())).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.DeleteAsync("/api/restaurants/1/orders/1")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/auth/config")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Member_cannot_impersonate_owner_edit_others_or_promote_self_and_admin_can_manage_orders()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "member");
+        var forged = new { MenuItemId = 2, Sauce = "Ingen sås", Drink = "Vatten", Quantity = 1, Name = "Anna",
+            OwnerUserId = Guid.NewGuid(), IsAdmin = true };
+        var created = await client.PostAsJsonAsync("/api/restaurants/1/orders", forged);
+        created.EnsureSuccessStatusCode();
+        var order = (await created.Content.ReadFromJsonAsync<OrderDetails>())!;
+        Assert.Equal(new TestUser().Id, order.OwnerUserId);
+        var input = Pizza(); input.Revision = order.Revision;
+        var ownEdit = await client.PutAsJsonAsync($"/api/restaurants/1/orders/{order.Id}", input);
+        ownEdit.EnsureSuccessStatusCode();
+        order = (await ownEdit.Content.ReadFromJsonAsync<OrderDetails>())!;
+        input.Revision = order.Revision;
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "other");
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync($"/api/restaurants/1/orders/{order.Id}", input)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.DeleteAsync($"/api/restaurants/1/orders/{order.Id}?revision={order.Revision}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync($"/api/restaurants/1/orders/{order.Id}/collector", new CollectorInput(true, order.Revision, order.OrderDate))).StatusCode);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "forged-admin");
+        Assert.False((await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.IsAdmin);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/restaurants/1/orders/complete", new CompleteDayInput(order.OrderDate, []))).StatusCode);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "admin");
+        Assert.NotEqual(order.OwnerUserId, (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.Id);
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync($"/api/restaurants/1/orders/{order.Id}", input)).StatusCode);
     }
 }

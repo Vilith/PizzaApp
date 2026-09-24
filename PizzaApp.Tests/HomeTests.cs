@@ -10,8 +10,10 @@ namespace PizzaApp.Tests;
 public class HomeTests : TestContext
 {
     private readonly FakeOrders orders = new();
+    private readonly FakeAuth auth = new();
     public HomeTests()
     {
+        Services.AddSingleton<IAuthService>(auth);
         Services.AddSingleton<IOrderApiService>(orders);
         Services.AddSingleton<IRestaurantApiService>(new FakeRestaurants());
     }
@@ -150,6 +152,39 @@ public class HomeTests : TestContext
         page.Find("[data-restaurant='1']").Click();
         page.WaitForAssertion(() => Assert.Contains("Dagens lista är rensad", page.Markup));
         Assert.Empty(page.FindAll("#daily-list .order-row, #daily-list details"));
+    }
+
+    [Fact]
+    public void Signed_out_users_only_see_login_and_logout_clears_loaded_orders()
+    {
+        auth.User = null;
+        var page = RenderComponent<Home>();
+        Assert.NotEmpty(page.FindAll("#login-email"));
+        Assert.Empty(page.FindAll("[data-restaurant]"));
+        page.Find("#login-email").Change("anna@example.test");
+        page.Find("#login-password").Change("test-password");
+        page.Find("form").Submit();
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("[data-restaurant='1']")));
+        page.Find("[data-restaurant='1']").Click();
+        page.Find("[data-action='logout']").Click();
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("#login-email")));
+        Assert.Empty(page.FindAll("#daily-list"));
+    }
+
+    [Fact]
+    public void Members_can_only_edit_their_own_orders_and_cannot_complete_the_day()
+    {
+        auth.User = new(new TestUser().Id, "anna@example.test", false);
+        orders.Existing.OwnerUserId = Guid.NewGuid();
+        orders.Existing.Name = "Annan person";
+        var page = RenderComponent<Home>();
+        page.Find("[data-restaurant='1']").Click();
+        Assert.Empty(page.FindAll("[data-edit], [data-delete], [data-action='complete']"));
+        Assert.True(page.Find("[data-collector='1']").HasAttribute("disabled"));
+        orders.Existing.OwnerUserId = auth.User.Id;
+        page.Find("#daily-list .btn-outline-primary").Click();
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("[data-edit='1']")));
+        Assert.False(page.Find("[data-collector='1']").HasAttribute("disabled"));
     }
 
     private class FakeRestaurants : IRestaurantApiService

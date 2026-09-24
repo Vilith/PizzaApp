@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PizzaApp.Api.Services;
 using PizzaApp.Shared;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PizzaApp.Api.Controllers;
 
@@ -21,6 +22,7 @@ public class OrdersController(OrderService service) : ControllerBase
         Handle(() => service.SetCollectorAsync(restaurantId, id, input));
 
     [HttpPost("complete")]
+    [Authorize(Policy = "Admin")]
     public Task<ActionResult<DailyOrderList>> Complete(int restaurantId, CompleteDayInput input) =>
         Handle(() => service.CompleteAsync(restaurantId, input));
 

@@ -8,7 +8,7 @@ using PizzaApp.Shared;
 
 namespace PizzaApp.Api.Services;
 
-public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<OrderingOptions> options)
+public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<OrderingOptions> options, ICurrentUser user)
 {
     private static readonly TimeZoneInfo Stockholm = TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm");
 
@@ -68,7 +68,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         var item = await db.MenuItems.AsNoTracking().SingleOrDefaultAsync(m => m.Id == input.MenuItemId && m.RestaurantId == restaurantId)
             ?? throw new OrderException(400, "Rätten finns inte på restaurangens meny.");
         var order = id.HasValue ? await EditableAsync(restaurantId, id.Value, date, input.Revision) : new PizzaOrder
-        { RestaurantId = restaurantId, OrderDate = date, CreatedAt = clock.GetUtcNow().UtcDateTime };
+        { OwnerUserId = user.Id, RestaurantId = restaurantId, OrderDate = date, CreatedAt = clock.GetUtcNow().UtcDateTime };
         if (!id.HasValue || order.MenuItemId != item.Id) order.UnitPrice = item.Price;
         if (order.Name != input.Name?.Trim()) order.CanCollect = false;
         order.MenuItemId = item.Id;
@@ -121,7 +121,8 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         var order = await EditableAsync(restaurantId, id, date, input.Revision);
         if (string.IsNullOrWhiteSpace(order.Name)) throw new OrderException(400, "Ange ett namn i beställningen för att kunna hämta.");
         var orders = await db.Orders.Where(o => o.RestaurantId == restaurantId && o.OrderDate == date).ToListAsync();
-        foreach (var row in orders.Where(o => string.Equals(o.Name, order.Name, StringComparison.OrdinalIgnoreCase)))
+        foreach (var row in orders.Where(o => o.OwnerUserId == order.OwnerUserId
+            && string.Equals(o.Name, order.Name, StringComparison.OrdinalIgnoreCase)))
         {
             row.CanCollect = input.CanCollect;
             row.Revision = Guid.NewGuid();
@@ -133,6 +134,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
 
     public async Task<DailyOrderList> CompleteAsync(int restaurantId, CompleteDayInput input)
     {
+        if (!user.IsAdmin) throw new OrderException(403, "Endast administratörer får avsluta dagens beställning.");
         await using var transaction = await db.Database.BeginTransactionAsync();
         await LockRestaurantAsync(restaurantId);
         var restaurant = await RestaurantAsync(restaurantId);
@@ -165,6 +167,8 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
     {
         var order = await db.Orders.SingleOrDefaultAsync(o => o.Id == id && o.RestaurantId == restaurantId && o.OrderDate == date)
             ?? throw new OrderException(404, "Beställningen finns inte i dagens lista. Uppdatera listan.");
+        if (!user.IsAdmin && order.OwnerUserId != user.Id)
+            throw new OrderException(403, "Du får bara ändra dina egna beställningar.");
         if (order.Revision != revision)
             throw new OrderException(409, "Någon har ändrat beställningen. Uppdatera listan innan du försöker igen.");
         return order;
@@ -180,6 +184,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
     private static OrderDetails Details(PizzaOrder o) => new()
     {
         Id = o.Id, RestaurantId = o.RestaurantId!.Value, MenuItemId = o.MenuItemId!.Value,
+        OwnerUserId = o.OwnerUserId,
         UnitPrice = o.UnitPrice, CanCollect = o.CanCollect,
         OrderDate = o.OrderDate!.Value, Pizza = o.Pizza, Name = o.Name, Comment = o.Comment,
         Quantity = o.Quantity, Sauce = o.Sauce, Drink = o.Drink, CreatedAt = o.CreatedAt, Revision = o.Revision

@@ -1,6 +1,19 @@
 @page "/"
 @inject IOrderApiService OrderApiService
 @inject IRestaurantApiService RestaurantApiService
+@inject IAuthService Auth
+@implements IDisposable
+
+@if (Auth.User == null)
+{
+    <Login />
+}
+else
+{
+<div class="restaurant-toolbar">
+    <span>@Auth.User.Email · @(Auth.User.IsAdmin ? "Administratör" : "Användare")</span>
+    <button class="text-button" data-action="logout" disabled="@(busy || loading)" @onclick="SignOut">Logga ut</button>
+</div>
 
 @if (restaurant == null)
 {
@@ -31,7 +44,7 @@
             }
         </div>
         @if (restaurants.Count == 0 && error == null) { <p>Det finns inga restauranger ännu.</p> }
-        <div class="info-note">Ingen inloggning behövs. Namn är valfritt och varje restaurang har sin egen lista.</div>
+        <div class="info-note">Alla kan se dagens lista. Du kan ändra dina egna beställningar. Administratörer kan hantera alla beställningar och avsluta dagen.</div>
     }
 }
 else
@@ -140,14 +153,14 @@ else
             {
                 <div class="summary-box">
                     <h3>Att ringa in</h3><p>Kryssa i de som kan hämta. Låt bara de som faktiskt hämtade vara ikryssade när dagen avslutas.</p>
-                    @foreach (var person in daily.Orders.GroupBy(o => o.Name, StringComparer.OrdinalIgnoreCase).OrderBy(g => g.Key))
+                    @foreach (var person in daily.Orders.GroupBy(o => new { o.OwnerUserId, Name = o.Name.ToUpperInvariant() }).OrderBy(g => g.Key.Name))
                     {
                         var representative = person.First();
                         <label class="collector-row">
                             <input type="checkbox" data-collector="@representative.Id" checked="@person.Any(o => o.CanCollect)"
-                                   disabled="@(busy || daily.CollectedAt != null || string.IsNullOrWhiteSpace(person.Key))"
+                                   disabled="@(busy || daily.CollectedAt != null || !CanEdit(representative) || string.IsNullOrWhiteSpace(representative.Name))"
                                    @onchange="e => SetCollector(representative, e.Value is true)" />
-                            <span>@(string.IsNullOrWhiteSpace(person.Key) ? "Utan namn (ange namn för att kunna hämta)" : person.Key)</span>
+                            <span>@(string.IsNullOrWhiteSpace(representative.Name) ? "Utan namn (ange namn för att kunna hämta)" : representative.Name)</span>
                         </label>
                     }
                 </div>
@@ -170,10 +183,13 @@ else
                                 @if (!string.IsNullOrWhiteSpace(order.Comment)) { <span class="order-comment">@order.Comment</span> }
                                 <small>@(string.IsNullOrWhiteSpace(order.Name) ? "Utan namn" : order.Name)</small>
                             </div>
+                            @if (CanEdit(order))
+                            {
                             <div class="row-actions">
                                 <button class="text-button" data-edit="@order.Id" disabled="@(busy || daily.IsLocked)" @onclick="() => Edit(order)">Ändra</button>
                                 <button class="text-button danger" data-delete="@order.Id" disabled="@(busy || daily.IsLocked)" @onclick="() => deleteId = order.Id">Ta bort</button>
                             </div>
+                            }
                             @if (deleteId == order.Id)
                             {
                                 <div class="delete-confirm" role="alert"><span>Ta bort @order.Quantity × @order.Pizza?</span>
@@ -184,12 +200,19 @@ else
                         </div>
                     }
                 </details>
+                @if (Auth.User.IsAdmin)
+                {
                 <div class="completion-box">
                         <p>Dagens beställning låses och sparas för framtida statistik när den är hämtad.</p>
                         <button class="btn btn-primary" data-action="complete" disabled="@(busy || !daily.Orders.Any(o => o.CanCollect))" @onclick="Complete">
                             @(restaurant.IsPizzeria ? "Pizzorna är hämtade" : "Maten är hämtad")
                         </button>
                 </div>
+                }
+                else
+                {
+                    <p class="muted">En administratör avslutar dagens beställning när maten är hämtad.</p>
+                }
             }
             }
         </section>
@@ -201,7 +224,32 @@ else
     <button class="btn btn-outline-primary" disabled="@(busy || loading)" @onclick="Reload">Hämta senaste uppgifter</button>
 }
 
+}
+
 @code {
+    private Guid? loadedUser;
+    private bool CanEdit(OrderDetails order) => Auth.User is { } user && (user.IsAdmin || order.OwnerUserId == user.Id);
+
+    private void AuthChanged() => _ = InvokeAsync(async () =>
+    {
+        if (loadedUser != Auth.User?.Id)
+        {
+            loadedUser = Auth.User?.Id;
+            restaurant = null; daily = null; input = null; menu = []; restaurants = [];
+            editingId = deleteId = null; error = success = null;
+            if (Auth.User != null) await LoadRestaurants();
+        }
+        StateHasChanged();
+    });
+
+    private async Task SignOut()
+    {
+        if (busy || loading) return;
+        try { await Auth.SignOutAsync(); }
+        catch (Exception ex) when (IsConnectionError(ex)) { /* Local session is always cleared. */ }
+    }
+
+    public void Dispose() => Auth.Changed -= AuthChanged;
     private List<Restaurant> restaurants = [];
     private List<MenuItem> menu = [];
     private Restaurant? restaurant;
@@ -215,9 +263,15 @@ else
     private string? success;
     private string lastRefreshed = "";
 
-    protected override Task OnInitializedAsync() => LoadRestaurants();
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.Changed += AuthChanged;
+        loadedUser = Auth.User?.Id;
+        if (Auth.User != null) await LoadRestaurants();
+        else loading = false;
+    }
 
-    private static bool IsConnectionError(Exception ex) => ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or OrderApiException;
+    private static bool IsConnectionError(Exception ex) => ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or OrderApiException or AuthException;
     private static string Extras(string? sauce, string? drink) => string.Join(" · ", new[] { sauce, drink }.Where(s => !string.IsNullOrEmpty(s)));
 
     private async Task LoadRestaurants()

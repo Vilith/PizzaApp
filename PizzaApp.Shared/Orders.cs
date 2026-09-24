@@ -25,6 +25,7 @@ public class OrderInput
 
 public class OrderDetails : OrderInput
 {
+    public Guid? OwnerUserId { get; set; }
     public decimal? UnitPrice { get; set; }
     public bool CanCollect { get; set; }
     public int Id { get; set; }

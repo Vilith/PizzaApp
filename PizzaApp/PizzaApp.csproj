@@ -43,6 +43,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <EmbeddedResource Include="clientsettings.json" LogicalName="PizzaApp.clientsettings.json" />
         <!-- App Icon -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
 

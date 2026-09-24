@@ -15,6 +15,7 @@ public class OrderServiceTests : IDisposable
     private readonly TestClock clock = new();
     private readonly OrderingOptions settings = new();
     private readonly OrderService service;
+    private readonly TestUser actor = new();
 
     public OrderServiceTests()
     {
@@ -23,11 +24,38 @@ public class OrderServiceTests : IDisposable
         db.Database.EnsureCreated();
         db.MenuItems.Add(new MenuItem { Id = 100, Name = "Dagens rätt", Price = 100, RestaurantId = 2 });
         db.SaveChanges();
-        service = new(db, clock, Options.Create(settings));
+        service = new(db, clock, Options.Create(settings), actor);
     }
 
     private static OrderInput Pizza(int quantity = 1, string sauce = "Vitlökssås") => new()
     { MenuItemId = 2, Quantity = quantity, Sauce = sauce, Drink = "Vatten" };
+
+    [Fact]
+    public async Task Collector_choice_does_not_change_another_account_with_the_same_name()
+    {
+        actor.IsAdmin = false;
+        var input = Pizza(); input.Name = "Anna";
+        var first = await service.SaveAsync(1, input);
+        actor.Id = Guid.NewGuid();
+        var second = await service.SaveAsync(1, input);
+        var day = await service.SetCollectorAsync(1, second.Id, new(true, second.Revision, second.OrderDate));
+        Assert.True(day.Orders.Single(o => o.Id == second.Id).CanCollect);
+        Assert.False(day.Orders.Single(o => o.Id == first.Id).CanCollect);
+        Assert.Equal(403, (await Assert.ThrowsAsync<OrderException>(() => service.CompleteAsync(1,
+            new(day.Date, day.Orders.ToDictionary(o => o.Id, o => o.Revision))))).StatusCode);
+    }
+
+    [Fact]
+    public async Task Legacy_orders_without_owner_can_only_be_edited_by_admin()
+    {
+        var order = await service.SaveAsync(1, Pizza());
+        (await db.Orders.SingleAsync()).OwnerUserId = null;
+        await db.SaveChangesAsync();
+        actor.IsAdmin = false;
+        Assert.Equal(403, (await Assert.ThrowsAsync<OrderException>(() => service.DeleteAsync(1, order.Id, order.Revision))).StatusCode);
+        actor.IsAdmin = true;
+        await service.DeleteAsync(1, order.Id, order.Revision);
+    }
 
     [Fact]
     public async Task Wireframe_ala_carte_menu_can_be_ordered_without_pizza_choices()
@@ -247,7 +275,7 @@ public class OrderServiceTests : IDisposable
         var saved = await service.SaveAsync(1, Pizza());
         using var otherDb = new PizzaDbContext(new DbContextOptionsBuilder<PizzaDbContext>().UseSqlite(connection).Options);
         await otherDb.Orders.SingleAsync(o => o.Id == saved.Id);
-        var otherService = new OrderService(otherDb, clock, Options.Create(settings));
+        var otherService = new OrderService(otherDb, clock, Options.Create(settings), actor);
         var edit = Pizza(2); edit.Revision = saved.Revision;
         await service.SaveAsync(1, edit, saved.Id);
         Assert.Equal(409, (await Assert.ThrowsAsync<OrderException>(() => otherService.SaveAsync(1, edit, saved.Id))).StatusCode);

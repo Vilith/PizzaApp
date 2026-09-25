@@ -4,6 +4,8 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
+using PizzaApp.Api.Data;
 
 namespace PizzaApp.Api.Services;
 
@@ -21,7 +23,7 @@ public class SupabaseOptions
 // on the next request instead of waiting for an old JWT to expire.
 public sealed class SupabaseAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder,
-    IOptions<SupabaseOptions> supabase, IHttpClientFactory clients)
+    IOptions<SupabaseOptions> supabase, IHttpClientFactory clients, PizzaDbContext db)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -43,17 +45,24 @@ public sealed class SupabaseAuthenticationHandler(
             var user = json.RootElement;
             if (!user.TryGetProperty("id", out var id) || !Guid.TryParse(id.GetString(), out var userId)
                 || userId == Guid.Empty
-                || !user.TryGetProperty("email_confirmed_at", out var confirmed) || confirmed.ValueKind != JsonValueKind.String
-                || (user.TryGetProperty("is_anonymous", out var anonymous) && anonymous.ValueKind == JsonValueKind.True)
-                || !user.TryGetProperty("app_metadata", out var metadata)
-                || !metadata.TryGetProperty("pizza_role", out var role) || role.ValueKind != JsonValueKind.String
-                || role.GetString() is not ("member" or "admin"))
+                || !user.TryGetProperty("email_confirmed_at", out var confirmed) || confirmed.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(confirmed.GetString())
+                || (user.TryGetProperty("is_anonymous", out var anonymous) && anonymous.ValueKind == JsonValueKind.True))
                 return AuthenticateResult.Fail("Kontot har inte tillgång till PizzaApp.");
+            string? assignedRole = null;
+            if (user.TryGetProperty("app_metadata", out var metadata) && metadata.TryGetProperty("pizza_role", out var role) && role.ValueKind != JsonValueKind.Null)
+            {
+                if (role.ValueKind != JsonValueKind.String || role.GetString() is not ("member" or "admin"))
+                    return AuthenticateResult.Fail("Kontot har inte tillgång till PizzaApp.");
+                assignedRole = role.GetString();
+            }
+            else if (await db.UserProfiles.AsNoTracking().AnyAsync(p => p.UserId == userId && p.IsRegisteredMember, Context.RequestAborted))
+                assignedRole = "member";
+            if (assignedRole == null) return AuthenticateResult.Fail("Kontot har inte tillgång till PizzaApp.");
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(ClaimTypes.Email, user.TryGetProperty("email", out var email) ? email.GetString() ?? "" : ""),
-                new Claim(ClaimTypes.Role, role.GetString()!)
+                new Claim(ClaimTypes.Role, assignedRole)
             };
             return AuthenticateResult.Success(new AuthenticationTicket(
                 new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name)), Scheme.Name));

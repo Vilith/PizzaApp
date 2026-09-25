@@ -38,6 +38,7 @@ public class OrderServiceTests : IDisposable
         var input = Pizza(); input.Name = "Anna";
         var first = await service.SaveAsync(1, input);
         actor.Id = Guid.NewGuid();
+        (await db.UserProfiles.SingleAsync()).DisplayName = "AnnaOld";
         db.UserProfiles.Add(new() { UserId = actor.Id, DisplayName = "Anna", Revision = Guid.NewGuid() });
         await db.SaveChangesAsync();
         var second = await service.SaveAsync(1, input);

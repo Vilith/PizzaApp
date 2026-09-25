@@ -40,7 +40,7 @@ public class ProfileSettingsTests : TestContext
         Assert.Contains("Ange ditt namn eller nick", page.Markup);
         Assert.Equal("", auth.User!.DisplayName);
         page.Find(".profile-toolbar button").Click();
-        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("#login-email")));
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("#login-alias")));
         Assert.Empty(page.FindAll("#profile-name"));
     }
 

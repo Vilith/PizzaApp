@@ -39,6 +39,9 @@ public class AuthController(IOptions<SupabaseOptions> options, ICurrentUser user
             return Problem(statusCode: 400, detail: "Ange ett namn eller nick utan radbrytningar.");
         if (!ProfileImages.IsValid(input.AvatarDataUrl))
             return Problem(statusCode: 400, detail: "Välj en giltig profilbild, högst 256 × 256 pixlar och 256 kB i PNG-format.");
+        var key = PizzaDbContext.NormalizeAlias(name);
+        if (await db.UserProfiles.AnyAsync(p => p.AliasKey == key && p.UserId != user.Id))
+            return Problem(statusCode: 409, detail: "Det nick/alias du valt är upptaget. Välj ett annat.");
         var profile = await db.UserProfiles.SingleOrDefaultAsync(p => p.UserId == user.Id);
         if ((profile?.Revision ?? Guid.Empty) != input.Revision)
             return Problem(statusCode: 409, detail: "Profilen har ändrats. Hämta profilen igen innan du sparar.");
@@ -48,11 +51,12 @@ public class AuthController(IOptions<SupabaseOptions> options, ICurrentUser user
             db.UserProfiles.Add(profile);
         }
         profile.DisplayName = name;
+        profile.LoginEmail = User.FindFirstValue(ClaimTypes.Email);
         profile.AvatarDataUrl = input.AvatarDataUrl;
         profile.Revision = Guid.NewGuid();
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateException)
-        { return Problem(statusCode: 409, detail: "Profilen kunde inte sparas. Hämta profilen igen och försök på nytt."); }
+        { return Problem(statusCode: 409, detail: "Aliaset kan vara upptaget eller profilen ändrad. Hämta profilen igen och försök på nytt."); }
         return Details(profile);
     }
 

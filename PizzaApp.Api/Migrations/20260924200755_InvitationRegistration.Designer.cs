@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PizzaApp.Api.Data;
@@ -11,9 +12,11 @@ using PizzaApp.Api.Data;
 namespace PizzaApp.Api.Migrations
 {
     [DbContext(typeof(PizzaDbContext))]
-    partial class PizzaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260924200755_InvitationRegistration")]
+    partial class InvitationRegistration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -240,11 +243,6 @@ namespace PizzaApp.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AliasKey")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<string>("AvatarDataUrl")
                         .HasMaxLength(350000)
                         .HasColumnType("character varying(350000)");
@@ -257,18 +255,11 @@ namespace PizzaApp.Api.Migrations
                     b.Property<bool>("IsRegisteredMember")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("LoginEmail")
-                        .HasMaxLength(254)
-                        .HasColumnType("character varying(254)");
-
                     b.Property<Guid>("Revision")
                         .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.HasKey("UserId");
-
-                    b.HasIndex("AliasKey")
-                        .IsUnique();
 
                     b.ToTable("UserProfiles");
                 });

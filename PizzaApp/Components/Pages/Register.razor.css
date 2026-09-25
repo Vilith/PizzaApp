@@ -1,0 +1,4 @@
+.registration-panel { max-width: 480px; margin: 32px auto; padding: 26px; background: white; border: 1px solid #dce4ed; border-radius: 14px; }
+h1 { font-size: 28px; font-weight: 750; margin: 16px 0; }
+label { display: block; font-weight: 600; margin-bottom: 6px; }
+p { overflow-wrap: anywhere; }

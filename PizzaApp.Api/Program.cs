@@ -4,6 +4,7 @@ using PizzaApp.Api.Data;
 using PizzaApp.Api.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using System.Threading.RateLimiting;
 
 namespace PizzaApp.Api
 {
@@ -21,6 +22,16 @@ namespace PizzaApp.Api
             builder.Services.Configure<OrderingOptions>(builder.Configuration.GetSection("Ordering"));
             builder.Services.AddScoped<OrderService>();
             builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection("Supabase"));
+            builder.Services.AddScoped<RegistrationService>();
+            builder.Services.AddHttpClient("SupabaseRegistration", client => client.Timeout = TimeSpan.FromSeconds(20))
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = 429;
+                options.AddPolicy("Registration", context => RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
+                    { PermitLimit = 20, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
+            });
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<ICurrentUser, CurrentUser>();
             builder.Services.AddHttpClient("SupabaseVerification", client => client.Timeout = TimeSpan.FromSeconds(15))
@@ -46,6 +57,8 @@ namespace PizzaApp.Api
             }
 
             app.UseHttpsRedirection();
+            app.UseRouting();
+            app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
 

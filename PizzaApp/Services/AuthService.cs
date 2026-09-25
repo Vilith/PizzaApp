@@ -18,7 +18,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
     public SignedInUser? User { get; private set; }
     public event Action? Changed;
 
-    public async Task SignInAsync(string email, string password)
+    public async Task SignInAsync(string alias, string password)
     {
         await gate.WaitAsync();
         try
@@ -33,7 +33,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
                 ?? throw new AuthException("Inloggningen är inte konfigurerad.");
             if (!Uri.TryCreate(config.Url, UriKind.Absolute, out var uri) || uri.Scheme != "https")
                 throw new AuthException("Inloggningen kräver en säker anslutning.");
-            var signedInTokens = await RequestTokensAsync("password", new { email = email.Trim(), password });
+            var signedInTokens = await RequestTokensAsync("password", new AliasLogin { Alias = alias.Trim(), Password = password });
             var signedInUser = await LoadUserAsync(signedInTokens.AccessToken);
             if (version != sessionVersion) throw new AuthException("Inloggningen avbröts. Försök igen.");
             tokens = signedInTokens;
@@ -71,13 +71,15 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
 
     private async Task<TokenResponse> RequestTokensAsync(string grant, object payload)
     {
-        using var request = AuthRequest(HttpMethod.Post, "token?grant_type=" + grant);
+        using var request = grant == "password" ? new HttpRequestMessage(HttpMethod.Post, "api/auth/login") : AuthRequest(HttpMethod.Post, "token?grant_type=" + grant);
         request.Content = JsonContent.Create(payload);
-        using var response = await clients.CreateClient("SupabaseAuth").SendAsync(request);
+        using var response = await clients.CreateClient(grant == "password" ? "PublicApi" : "SupabaseAuth").SendAsync(request);
         if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-            throw new AuthException(grant == "password" ? "Fel e-postadress eller lösenord, eller kontot är inte aktiverat." : "Din inloggning har gått ut. Logga in igen.");
+            throw new AuthException(grant == "password" ? "Fel nick/alias eller lösenord, eller kontot är inte aktiverat." : "Din inloggning har gått ut. Logga in igen.");
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
             throw new AuthException("För många försök. Vänta en stund och försök igen.");
+        if ((int)response.StatusCode >= 500)
+            throw new AuthException("Inloggningen kunde inte nås. Försök igen senare.");
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<TokenResponse>();
         if (result == null || string.IsNullOrEmpty(result.AccessToken) || string.IsNullOrEmpty(result.RefreshToken) || result.ExpiresIn <= 0)
@@ -165,6 +167,23 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
     }
 
     private sealed class ProfileProblem { public string? Detail { get; set; } }
+
+    public Task RegisterAsync(RegistrationInput input) => RegistrationRequestAsync("start", input);
+    public Task ActivateRegistrationAsync(RegistrationInput input) => RegistrationRequestAsync("activate", input);
+
+    private async Task RegistrationRequestAsync(string action, object input)
+    {
+        // Public client: registration must work before there is an authorized session.
+        using var response = await clients.CreateClient("PublicApi").PostAsJsonAsync("api/registration/" + action, input);
+        if (response.IsSuccessStatusCode) return;
+        if ((int)response.StatusCode == 429) throw new AuthException("För många försök. Vänta en stund och försök igen.");
+        if ((int)response.StatusCode is 400 or 403 or 409 or 503)
+        {
+            var problem = await response.Content.ReadFromJsonAsync<ProfileProblem>();
+            throw new AuthException(problem?.Detail ?? "Kontrollera registreringsuppgifterna och försök igen.");
+        }
+        response.EnsureSuccessStatusCode();
+    }
 
     public void ClearSession()
     {

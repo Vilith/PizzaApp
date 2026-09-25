@@ -1,32 +1,43 @@
 @inject IAuthService Auth
 
+@if (registering)
+{
+    <Register OnBack="() => registering = false" />
+}
+else
+{
+
 <section class="panel selection-panel" style="max-width: 440px; margin: 32px auto;" aria-labelledby="login-heading">
     <p class="eyebrow">PIZZAAPP</p>
     <h1 id="login-heading">Logga in</h1>
-    <p>Logga in med ditt godkända konto. Kontakta administratören om du behöver ett konto eller hjälp med lösenordet.</p>
+    <p>Logga in med ditt nick/alias och lösenord, eller skapa ett konto.</p>
     <EditForm Model="credentials" OnValidSubmit="SignIn">
         <DataAnnotationsValidator />
         <ValidationSummary />
         <fieldset disabled="@busy">
-            <label for="login-email">E-post</label>
-            <InputText id="login-email" type="email" class="form-control mb-3" autocomplete="username" @bind-Value="credentials.Email" />
+            <label for="login-alias">Nick/alias</label>
+            <InputText id="login-alias" type="text" class="form-control mb-3" autocomplete="username" @bind-Value="credentials.Alias" />
             <label for="login-password">Lösenord</label>
             <InputText id="login-password" type="password" class="form-control mb-3" autocomplete="current-password" @bind-Value="credentials.Password" />
             <button class="btn btn-primary" type="submit">@(busy ? "Loggar in…" : "Logga in")</button>
         </fieldset>
     </EditForm>
+    <button class="btn btn-outline-primary mt-3" data-action="register" disabled="@busy" @onclick="ShowRegistration">Skapa konto</button>
     @if (error != null) { <p class="alert alert-danger mt-3" role="alert">@error</p> }
 </section>
+}
 
 @code {
     private readonly Credentials credentials = new();
     private bool busy;
+    private bool registering;
+    private void ShowRegistration() { credentials.Password = ""; error = null; registering = true; }
     private string? error;
     private async Task SignIn()
     {
         if (busy) return;
         busy = true; error = null;
-        try { await Auth.SignInAsync(credentials.Email, credentials.Password); }
+        try { await Auth.SignInAsync(credentials.Alias, credentials.Password); }
         catch (AuthException ex) { error = ex.Message; }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         { error = "Kunde inte ansluta till inloggningen. Kontrollera anslutningen och försök igen."; }
@@ -35,9 +46,9 @@
 
     private sealed class Credentials
     {
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Ange e-postadress.")]
-        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Ange en giltig e-postadress.")]
-        public string Email { get; set; } = "";
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Ange ditt nick/alias.")]
+        [System.ComponentModel.DataAnnotations.StringLength(100)]
+        public string Alias { get; set; } = "";
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Ange lösenord.")]
         public string Password { get; set; } = "";
     }

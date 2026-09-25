@@ -21,6 +21,7 @@
     <RazorComponent Include="../PizzaApp/Components/_Imports.razor" Link="Components/_Imports.razor" />
     <RazorComponent Include="../PizzaApp/Components/Pages/Home.razor" Link="Components/Pages/Home.razor" />
     <RazorComponent Include="../PizzaApp/Components/Pages/Login.razor" Link="Components/Pages/Login.razor" />
+    <RazorComponent Include="../PizzaApp/Components/Pages/Register.razor" Link="Components/Pages/Register.razor" />
     <RazorComponent Include="../PizzaApp/Components/Pages/ProfileSettings.razor" Link="Components/Pages/ProfileSettings.razor" />
   </ItemGroup>
 </Project>

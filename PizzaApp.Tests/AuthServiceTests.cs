@@ -12,7 +12,7 @@ public class AuthServiceTests
     {
         var backend = new Backend { ExpiresIn = 1 };
         var auth = new AuthService(backend);
-        await auth.SignInAsync("anna@example.test", "password");
+        await auth.SignInAsync("Anna", "password");
         Assert.False(auth.User!.IsAdmin);
         var tokens = await Task.WhenAll(auth.GetAccessTokenAsync(), auth.GetAccessTokenAsync());
         Assert.All(tokens, token => Assert.Equal("refreshed-token", token));
@@ -28,10 +28,10 @@ public class AuthServiceTests
     {
         var backend = new Backend { RejectPassword = true };
         var auth = new AuthService(backend);
-        await Assert.ThrowsAsync<AuthException>(() => auth.SignInAsync("anna@example.test", "wrong"));
+        await Assert.ThrowsAsync<AuthException>(() => auth.SignInAsync("Anna", "wrong"));
         Assert.Null(auth.User);
         backend.RejectPassword = false; backend.RejectProfile = true;
-        await Assert.ThrowsAsync<AuthException>(() => auth.SignInAsync("anna@example.test", "password"));
+        await Assert.ThrowsAsync<AuthException>(() => auth.SignInAsync("Anna", "password"));
         Assert.Null(auth.User);
         Assert.Null(await auth.GetAccessTokenAsync());
     }
@@ -41,12 +41,12 @@ public class AuthServiceTests
     {
         var backend = new Backend { ExpiresIn = 1 };
         var auth = new AuthService(backend);
-        await auth.SignInAsync("anna@example.test", "password");
+        await auth.SignInAsync("Anna", "password");
         backend.RejectRefresh = true;
         await Assert.ThrowsAsync<AuthException>(() => auth.GetAccessTokenAsync());
         Assert.Null(auth.User);
         backend.ExpiresIn = 3600;
-        await auth.SignInAsync("anna@example.test", "password");
+        await auth.SignInAsync("Anna", "password");
         backend.FailLogout = true;
         await Assert.ThrowsAsync<HttpRequestException>(() => auth.SignOutAsync());
         Assert.Null(auth.User);
@@ -58,7 +58,7 @@ public class AuthServiceTests
     {
         var backend = new Backend { ExpiresIn = 1 };
         var auth = new AuthService(backend);
-        await auth.SignInAsync("anna@example.test", "password");
+        await auth.SignInAsync("Anna", "password");
         backend.OnRefresh = auth.ClearSession;
         Assert.Null(await auth.GetAccessTokenAsync());
         Assert.Null(auth.User);
@@ -80,7 +80,7 @@ public class AuthServiceTests
     {
         var backend = new Backend();
         var auth = new AuthService(backend);
-        await auth.SignInAsync("anna@example.test", "password");
+        await auth.SignInAsync("Anna", "password");
         await auth.UpdateProfileAsync(new() { DisplayName = "Pizzafan", AvatarDataUrl = TestProfileImage.Png });
         Assert.Equal("Pizzafan", auth.User!.DisplayName);
         Assert.Equal(TestProfileImage.Png, auth.User.AvatarDataUrl);
@@ -120,9 +120,10 @@ public class AuthServiceTests
                 return RejectProfile ? Status(HttpStatusCode.Unauthorized) : Json(profile);
             }
             if (path == "/api/auth/profile") return UpdateProfile(request);
+
+            if (path == "/api/auth/login")
+                return Login(request);
             Assert.Equal("sb_publishable_test", Assert.Single(request.Headers.GetValues("apikey")));
-            if (path.Contains("grant_type=password"))
-                return RejectPassword ? Status(HttpStatusCode.BadRequest) : Json(new { access_token = "login-token", refresh_token = "refresh-secret", expires_in = ExpiresIn });
             if (path.Contains("grant_type=refresh_token"))
             {
                 RefreshCalls++; OnRefresh?.Invoke();
@@ -143,6 +144,13 @@ public class AuthServiceTests
             var input = (await request.Content!.ReadFromJsonAsync<ProfileInput>())!;
             profile = profile with { DisplayName = input.DisplayName, AvatarDataUrl = input.AvatarDataUrl, ProfileRevision = Guid.NewGuid() };
             return await Json(profile);
+        }
+        private async Task<HttpResponseMessage> Login(HttpRequestMessage request)
+        {
+            Assert.Equal("api.example.test", request.RequestUri!.Host);
+            var input = (await request.Content!.ReadFromJsonAsync<AliasLogin>())!;
+            Assert.Equal("Anna", input.Alias);
+            return await (RejectPassword ? Status(HttpStatusCode.Unauthorized) : Json(new { access_token = "login-token", refresh_token = "refresh-secret", expires_in = ExpiresIn }));
         }
         private static Task<HttpResponseMessage> Json(object value) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(value) });
         private static Task<HttpResponseMessage> Status(HttpStatusCode code) => Task.FromResult(new HttpResponseMessage(code));

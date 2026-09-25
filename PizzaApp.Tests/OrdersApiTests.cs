@@ -150,7 +150,7 @@ public class OrdersApiTests
             scope.ServiceProvider.GetRequiredService<PizzaDbContext>().Database.EnsureCreated();
             var db = scope.ServiceProvider.GetRequiredService<PizzaDbContext>();
             foreach (var id in new[] { new TestUser().Id, Guid.Parse("22222222-2222-2222-2222-222222222222"), Guid.Parse("33333333-3333-3333-3333-333333333333") })
-                db.UserProfiles.Add(new() { UserId = id, DisplayName = "Anna", Revision = Guid.NewGuid() });
+                db.UserProfiles.Add(new() { UserId = id, DisplayName = id == new TestUser().Id ? "AnnaMember" : id.ToString().StartsWith("222") ? "Other" : "Anna", Revision = Guid.NewGuid() });
             db.SaveChanges();
             return host;
         }
@@ -261,7 +261,7 @@ public class OrdersApiTests
         var edited = await client.PutAsJsonAsync($"/api/restaurants/1/orders/{first.Id}", input);
         Assert.Equal("Pizzakungen", (await edited.Content.ReadFromJsonAsync<OrderDetails>())!.Name);
         client.DefaultRequestHeaders.Authorization = new("Bearer", "member");
-        Assert.Equal("Anna", (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.DisplayName);
+        Assert.Equal("AnnaMember", (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.DisplayName);
     }
 
     [Theory]

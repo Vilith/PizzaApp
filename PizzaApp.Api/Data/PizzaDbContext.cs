@@ -16,11 +16,28 @@ namespace PizzaApp.Api.Data
         public DbSet<Restaurant> Restaurants => Set<Restaurant>();
         public DbSet<MenuItem> MenuItems => Set<MenuItem>();
 
+        public static string NormalizeAlias(string alias) => alias.Trim().ToUpperInvariant();
+
+        private void PrepareAliases()
+        {
+            foreach (var entry in ChangeTracker.Entries<UserProfile>().Where(e => e.State is EntityState.Added or EntityState.Modified))
+                entry.Entity.AliasKey = NormalizeAlias(entry.Entity.DisplayName);
+        }
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        { PrepareAliases(); return base.SaveChanges(acceptAllChangesOnSuccess); }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        { PrepareAliases(); return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken); }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<UserProfile>().HasKey(p => p.UserId);
             modelBuilder.Entity<UserProfile>().Property(p => p.DisplayName).HasMaxLength(100);
+            modelBuilder.Entity<UserProfile>().Property(p => p.AliasKey).HasMaxLength(100);
+            modelBuilder.Entity<UserProfile>().HasIndex(p => p.AliasKey).IsUnique();
+            modelBuilder.Entity<UserProfile>().Property(p => p.LoginEmail).HasMaxLength(254);
             modelBuilder.Entity<UserProfile>().Property(p => p.AvatarDataUrl).HasMaxLength(350000);
             modelBuilder.Entity<UserProfile>().Property(p => p.Revision).IsConcurrencyToken();
             modelBuilder.Entity<CompletedOrderDay>().HasKey(d => new { d.RestaurantId, d.Date });

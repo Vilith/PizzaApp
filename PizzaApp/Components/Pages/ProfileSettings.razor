@@ -15,7 +15,7 @@ else
         </div>
         <p class="eyebrow">MIN PROFIL</p>
         <h1 id="profile-heading">@(string.IsNullOrWhiteSpace(Auth.User.DisplayName) ? "Välj ditt namn eller nick" : "Inställningar")</h1>
-        <p>Ditt namn eller nick används automatiskt när du beställer. Du kan ändra det här när du vill.</p>
+        <p>Ditt unika nick/alias används när du loggar in och beställer. Byter du nick här använder du det nya vid nästa inloggning.</p>
         <p class="account-email">@Auth.User.Email</p>
         <EditForm Model="input" OnValidSubmit="Save" @key="input">
             <DataAnnotationsValidator />

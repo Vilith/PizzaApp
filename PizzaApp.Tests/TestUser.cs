@@ -22,6 +22,11 @@ public sealed class FakeAuth : IAuthService
         Changed?.Invoke(); return Task.CompletedTask;
     }
     public Task RefreshUserAsync() { Changed?.Invoke(); return Task.CompletedTask; }
+    public bool Registered, Activated;
+    public bool FailRegistration;
+    public Task RegisterAsync(RegistrationInput input)
+    { if (FailRegistration) throw new AuthException("Registreringen misslyckades."); Registered = true; return Task.CompletedTask; }
+    public Task ActivateRegistrationAsync(RegistrationInput input) { Activated = true; return Task.CompletedTask; }
     public Task SignOutAsync() { ClearSession(); return Task.CompletedTask; }
     public void ClearSession() { User = null; Changed?.Invoke(); }
     public Task<string?> GetAccessTokenAsync() => Task.FromResult<string?>(User == null ? null : "test-token");

@@ -1,0 +1,66 @@
+@inject IAuthService Auth
+
+<section class="registration-panel" aria-labelledby="register-heading">
+    <button type="button" class="btn btn-link" disabled="@busy" @onclick="Back">← Till inloggningen</button>
+    <h1 id="register-heading">@(complete ? "Kontot är klart" : activating ? "Slutför befintligt konto" : "Skapa konto")</h1>
+    @if (complete)
+    {
+        <p role="status">Ditt konto är klart. Logga in med ditt nick/alias och lösenord för att börja beställa – inget godkännande från administratören behövs.</p>
+        <button class="btn btn-primary" @onclick="Back">Till inloggningen</button>
+    }
+    else
+    {
+        <p>@(activating ? "Ange kontots e-post och lösenord för att slutföra profilen." : "Välj ett unikt alias och lösenord. E-post anges vid registrering, men ingen mejlkod behövs.")</p>
+        <EditForm Model="input" OnValidSubmit="Submit">
+            <DataAnnotationsValidator /><ValidationSummary />
+            <fieldset disabled="@busy">
+                <label for="register-name">Namn / nick / alias</label>
+                <p>Ditt alias måste vara unikt och används även när du loggar in.</p>
+                <InputText id="register-name" class="form-control mb-3" autocomplete="nickname" maxlength="100" @bind-Value="input.DisplayName" />
+                <label for="register-email">E-post</label>
+                <InputText id="register-email" type="email" class="form-control mb-3" autocomplete="email" maxlength="254" @bind-Value="input.Email" />
+                <label for="register-password">Lösenord (minst 8 tecken)</label>
+                <InputText id="register-password" type="password" class="form-control mb-3" autocomplete="@(activating ? "current-password" : "new-password")" maxlength="128" @bind-Value="input.Password" />
+                <button class="btn btn-primary" type="submit">@(busy ? "Vänta…" : activating ? "Slutför konto" : "Skapa konto")</button>
+                @if (!activating)
+                { <button class="btn btn-link" type="button" @onclick="ShowActivation">Slutför befintligt konto</button> }
+            </fieldset>
+        </EditForm>
+    }
+    @if (error != null) { <p class="alert alert-danger mt-3" role="alert">@error</p> }
+</section>
+
+@code {
+    [Parameter] public EventCallback OnBack { get; set; }
+    private readonly RegistrationInput input = new();
+
+    private bool activating, complete, busy;
+    private string? error;
+
+    private async Task Submit() => await Run(async () =>
+    {
+        try
+        {
+            if (activating) await Auth.ActivateRegistrationAsync(input);
+            else await Auth.RegisterAsync(input);
+            complete = true;
+        }
+        finally { input.Password = ""; }
+    });
+    private void ShowActivation() { activating = true; error = null; }
+    private async Task Back()
+    {
+        input.Password = "";
+        await OnBack.InvokeAsync();
+    }
+    private async Task Run(Func<Task> action)
+    {
+        if (busy) return;
+        busy = true; error = null;
+        try { await action(); }
+        catch (AuthException ex) { error = ex.Message; }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        { error = "Kunde inte läsa serverns svar. Om kontot redan skapats, välj Slutför befintligt konto och försök igen."; }
+        finally { busy = false; }
+    }
+}

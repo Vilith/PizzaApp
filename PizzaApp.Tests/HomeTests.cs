@@ -160,15 +160,15 @@ public class HomeTests : TestContext
     {
         auth.User = null;
         var page = RenderComponent<Home>();
-        Assert.NotEmpty(page.FindAll("#login-email"));
+        Assert.NotEmpty(page.FindAll("#login-alias"));
         Assert.Empty(page.FindAll("[data-restaurant]"));
-        page.Find("#login-email").Change("anna@example.test");
+        page.Find("#login-alias").Change("Anna");
         page.Find("#login-password").Change("test-password");
         page.Find("form").Submit();
         page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("[data-restaurant='1']")));
         page.Find("[data-restaurant='1']").Click();
         page.Find("[data-action='logout']").Click();
-        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("#login-email")));
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("#login-alias")));
         Assert.Empty(page.FindAll("#daily-list"));
     }
 

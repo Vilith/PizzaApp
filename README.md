@@ -6,7 +6,7 @@ Inloggning krävs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för Supabase-konfiguration
 
 ## Flöde
 
-- Logga in med e-post och lösenord för ett godkänt konto. Vid första inloggningen väljer du namn/nick/alias innan du kan beställa. Välj därefter Pizzeria (Kvänum Pizzeria) eller À la carte (Sperring).
+- Välj **Skapa konto**, ange nick, e-post och lösenord. Kontot blir klart direkt, utan mejlkod eller administratörsgodkännande. Logga in med ditt alias och lösenord. Äldre konton utan profil väljer nick via Slutför befintligt konto. Välj därefter Pizzeria (Kvänum Pizzeria) eller À la carte (Sperring).
 - Pizzeria: välj pizza, sås (inklusive Ingen sås), dryck och antal.
 - À la carte: välj rätt och antal, utan sås- eller dryckesval.
 - Ditt profilnamn används automatiskt; du behöver inte fylla i namn vid beställning. Kommentar är valfri. Under **Inställningar** kan du ändra nick samt välja eller ta bort en profilbild. Nya beställningar får det nya namnet; redan sparade beställningar och historiken behåller sitt ursprungliga namn.
@@ -21,7 +21,7 @@ Inloggning krävs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för Supabase-konfiguration
 
 Förutsätter .NET 9, MAUI Windows och databasanslutning i API-projektets User Secrets (`ConnectionStrings:DefaultConnection`). User Secrets konfigureras separat på varje dator. För Supabase-pooler ska projektidentifieraren sitta i `Username=postgres.<projekt-id>`, medan databasnamnet är `Database=postgres`.
 
-Den nya modellen kräver migrationerna till och med `UserProfiles`. Konfigurera även Supabase Auth enligt installationsguiden. Kör från lösningens katalog mot avsedd databas:
+Den nya modellen kräver migrationerna till och med `UniqueAliases`. Konfigurera Supabase Auth och stäng av Confirm email enligt installationsguiden. Kör från lösningens katalog mot avsedd databas:
 
 ```powershell
 dotnet tool restore
@@ -71,3 +71,5 @@ Testerna använder isolerade SQLite-databaser i minnet och ASP.NET:s testserver;
 TDD-arbetet började med 17 fallerande regeltester och därefter fem fallerande gränssnittstester. Implementationen gjorde dem gröna. Sviten täcker dessutom API-anrop, klientens HTTP-tjänst, datavalidering, samtidiga ändringar, borttagningsbekräftelse och att PostgreSQL-modellen stämmer med migrationerna. PostgreSQL-migrationens SQL kontrolleras utan en extern databas; själva databasuppgraderingen körs separat.
 
 Orderrutter: `GET/POST /api/restaurants/{restaurantId}/orders` samt `PUT/DELETE /api/restaurants/{restaurantId}/orders/{id}`. Uppdatering skickar aktuell `revision` i kroppen; borttagning skickar den som queryparameter. Den tidigare `/api/orders`-rutten har ersatts.
+
+Inloggning sker med unikt nick/alias och lösenord. Kör migrationerna till och med `UniqueAliases`; uppgraderingssteg för befintliga konton finns i [AUTH_SETUP.md](AUTH_SETUP.md). E-post anges vid registrering men behöver inte bekräftas. SMTP behövs inte för registreringen.

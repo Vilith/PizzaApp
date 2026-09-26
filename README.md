@@ -19,7 +19,7 @@ Inloggning krävs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för Supabase-konfiguration
 
 ## Köra lokalt på Windows
 
-Förutsätter .NET 9, MAUI Windows och databasanslutning i API-projektets User Secrets (`ConnectionStrings:DefaultConnection`). User Secrets konfigureras separat på varje dator. För Supabase-pooler ska projektidentifieraren sitta i `Username=postgres.<projekt-id>`, medan databasnamnet är `Database=postgres`.
+Förutsätter .NET 10 SDK 10.0.401 (eller senare patch i 10.0.4xx), Visual Studio 2026 och MAUI Windows och databasanslutning i API-projektets User Secrets (`ConnectionStrings:DefaultConnection`). User Secrets konfigureras separat på varje dator. För Supabase-pooler ska projektidentifieraren sitta i `Username=postgres.<projekt-id>`, medan databasnamnet är `Database=postgres`.
 
 Den nya modellen kräver migrationerna till och med `UniqueAliases`. Konfigurera Supabase Auth och stäng av Confirm email enligt installationsguiden. Kör från lösningens katalog mot avsedd databas:
 
@@ -63,7 +63,7 @@ Alternativt anges miljövariabeln `Ordering__LockAfterDeadline=true`. Servern ko
 
 ```powershell
 dotnet test PizzaApp.Tests/PizzaApp.Tests.csproj
-dotnet build PizzaApp/PizzaApp.csproj -f net9.0-windows10.0.19041.0
+dotnet build PizzaApp/PizzaApp.csproj -f net10.0-windows10.0.19041.0
 ```
 
 Testerna använder isolerade SQLite-databaser i minnet och ASP.NET:s testserver; de ansluter inte till Supabase. bUnit-testerna kompilerar samma Razor-komponent och klienttjänster som MAUI-appen utan att starta Windows-gränssnittet.

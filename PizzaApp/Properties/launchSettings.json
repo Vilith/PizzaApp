@@ -1,8 +1,12 @@
 {
   "profiles": {
-    "Windows Machine": {
+    "PizzaApp": {
       "commandName": "Project",
-      "nativeDebugging": false
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:49682;http://localhost:49683"
     }
   }
 }

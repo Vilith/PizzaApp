@@ -82,7 +82,7 @@ dotnet ef database update --project PizzaApp.Api -- --environment Development
 
 Även `Orders`, `CompletedOrderDays`, `Restaurants` och `MenuItems` skyddas av RLS och indragna direktbehörigheter. Supabases Data API ska inte kringgå .NET-API:ts regler. Backendens databasanslutning måste använda tabellägaren eller en betrodd roll som kan arbeta trots RLS, aldrig `anon`/`authenticated`. Säkerhetsmigrationers `Down` återöppnar inte direktåtkomsten.
 
-Ange API-serverns HTTPS-adress i `PizzaApp/clientsettings.json` och bygg appen på nytt. Standardvärdet `https://localhost:7113/` gäller lokal Windows-utveckling, inte en fysisk telefon.
+Webbappen och API:t serveras av `PizzaApp.Api` på samma adress. Klienten använder webbsidans basadress automatiskt. Konfigurera Supabase och databasanslutningen enbart på servern, aldrig i klientens `wwwroot`. Lokalt öppnas `https://localhost:7113/`; efter publicering öppnar även telefoner den publika HTTPS-adressen.
 
 ## Profiler, behörigheter och sessioner
 
@@ -98,7 +98,7 @@ API:t hämtar nick från profilen för nya beställningar. Klientfältet `Name` 
 | Avsluta dagen och spara historik | Nej | Ja |
 | Ändra en redan avslutad dag | Nej | Nej |
 
-Admin kringgår inte deadline/historiklåsning. Otillåten inloggning ger 401 och otillåten åtgärd 403. Lösenord och tokens skrivs inte till filer/webbläsarlagring. Sessionen finns i minnet, förnyas under användning och kräver ny inloggning efter appstängning. Utloggning rensar lokalt även vid nätverksfel och försöker avsluta Supabase-sessionen. En access-token kan gälla tills den löper ut; sätt `pizza_role` till `disabled` för omedelbar spärr av PizzaApp.
+Admin kringgår inte deadline/historiklåsning. Otillåten inloggning ger 401 och otillåten åtgärd 403. Lösenord och tokens skrivs inte till filer/webbläsarlagring. Sessionen finns i minnet, förnyas under användning och kräver ny inloggning efter omladdning av sidan eller stängning av fliken. Utloggning rensar lokalt även vid nätverksfel och försöker avsluta Supabase-sessionen. En access-token kan gälla tills den löper ut; sätt `pizza_role` till `disabled` för omedelbar spärr av PizzaApp.
 
 ## Verifiering före publicering
 

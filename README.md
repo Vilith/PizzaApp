@@ -1,6 +1,6 @@
 # PizzaApp
 
-MAUI/Blazor-app med två restauranger och en separat gemensam beställningslista per restaurang och dag.
+Blazor WebAssembly-webbapp på .NET 10 med två restauranger och en separat beställningslista per restaurang och dag. `PizzaApp.Api` serverar både gränssnitt och API på samma adress. Ingen installation eller MAUI/Android/iOS-workload behövs.
 
 Inloggning krävs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för Supabase-konfiguration, användarkonton, adminroller och databasbehörigheter före publicering.
 
@@ -17,9 +17,9 @@ Inloggning krävs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för Supabase-konfiguration
 - Uppdatera listan för att hämta andras senaste beställningar. Tidpunkten för senaste hämtning visas. Vid samtidiga ändringar måste den senaste versionen hämtas och öppnas med Ändra igen.
 - Godkända användare ser den gemensamma listan och kan skapa och ändra sina egna beställningar. Administratörer kan även ändra andras beställningar och avsluta dagen. Appen skickar inte beställningar till restaurangerna.
 
-## Köra lokalt på Windows
+## Köra webbappen lokalt
 
-Förutsätter .NET 10 SDK 10.0.401 (eller senare patch i 10.0.4xx), Visual Studio 2026 och MAUI Windows och databasanslutning i API-projektets User Secrets (`ConnectionStrings:DefaultConnection`). User Secrets konfigureras separat på varje dator. För Supabase-pooler ska projektidentifieraren sitta i `Username=postgres.<projekt-id>`, medan databasnamnet är `Database=postgres`.
+Förutsätter .NET 10 SDK 10.0.401 (eller senare patch i 10.0.4xx), valfritt Visual Studio 2026 med arbetsbelastningen ASP.NET och webbutveckling, samt databasanslutning i API-projektets User Secrets (`ConnectionStrings:DefaultConnection`). User Secrets konfigureras separat på varje dator. För Supabase-pooler ska projektidentifieraren sitta i `Username=postgres.<projekt-id>`, medan databasnamnet är `Database=postgres`.
 
 Den nya modellen kräver migrationerna till och med `UniqueAliases`. Konfigurera Supabase Auth och stäng av Confirm email enligt installationsguiden. Kör från lösningens katalog mot avsedd databas:
 
@@ -29,7 +29,7 @@ dotnet ef database update --project PizzaApp.Api -- --environment Development
 dotnet run --project PizzaApp.Api --launch-profile https
 ```
 
-Starta sedan `PizzaApp` med **Windows Machine** i Visual Studio. API:t ska vara igång på `https://localhost:7113`, som klienten använder. Vid behov: betro utvecklingscertifikatet med `dotnet dev-certs https --trust`.
+Öppna **https://localhost:7113/** i webbläsaren. I Visual Studio väljer du **PizzaApp.Api** som startprojekt (högerklicka → Ange som startprojekt), eller startprofilen **Webbapp**. Starta inte klientprojektet separat. Vid behov: betro utvecklingscertifikatet med `dotnet dev-certs https --trust`. Klienten använder automatiskt samma adress som webbsidan; `clientsettings.json` behövs inte längre.
 
 Migrationer körs inte automatiskt vid start. Tidigare beställningar bevaras i databasen, men exkluderas från nya dagslistor eftersom den gamla modellen inte sparade vilken restaurang eller menyrätt beställningen tillhörde. Befintliga restauranger och pizzor behålls.
 
@@ -63,13 +63,27 @@ Alternativt anges miljövariabeln `Ordering__LockAfterDeadline=true`. Servern ko
 
 ```powershell
 dotnet test PizzaApp.Tests/PizzaApp.Tests.csproj
-dotnet build PizzaApp/PizzaApp.csproj -f net10.0-windows10.0.19041.0
+dotnet build PizzaApp.Api/PizzaApp.Api.csproj
 ```
 
-Testerna använder isolerade SQLite-databaser i minnet och ASP.NET:s testserver; de ansluter inte till Supabase. bUnit-testerna kompilerar samma Razor-komponent och klienttjänster som MAUI-appen utan att starta Windows-gränssnittet.
+Testerna använder isolerade SQLite-databaser i minnet och ASP.NET:s testserver; de ansluter inte till Supabase. bUnit-testerna kompilerar samma Razor-komponent och klienttjänster som webbappen.
 
 TDD-arbetet började med 17 fallerande regeltester och därefter fem fallerande gränssnittstester. Implementationen gjorde dem gröna. Sviten täcker dessutom API-anrop, klientens HTTP-tjänst, datavalidering, samtidiga ändringar, borttagningsbekräftelse och att PostgreSQL-modellen stämmer med migrationerna. PostgreSQL-migrationens SQL kontrolleras utan en extern databas; själva databasuppgraderingen körs separat.
 
 Orderrutter: `GET/POST /api/restaurants/{restaurantId}/orders` samt `PUT/DELETE /api/restaurants/{restaurantId}/orders/{id}`. Uppdatering skickar aktuell `revision` i kroppen; borttagning skickar den som queryparameter. Den tidigare `/api/orders`-rutten har ersatts.
 
 Inloggning sker med unikt nick/alias och lösenord. Kör migrationerna till och med `UniqueAliases`; uppgraderingssteg för befintliga konton finns i [AUTH_SETUP.md](AUTH_SETUP.md). E-post anges vid registrering men behöver inte bekräftas. SMTP behövs inte för registreringen.
+
+## Publicera webbappen
+
+Publicera serverprojektet, så följer klienten och alla statiska resurser med:
+
+```powershell
+dotnet publish PizzaApp.Api/PizzaApp.Api.csproj -c Release -o artifacts/publish
+```
+
+Kör `dotnet PizzaApp.Api.dll` från publiceringskatalogen på en server med ASP.NET Core 10. Sätt `ConnectionStrings__DefaultConnection`, `Supabase__Url` och `Supabase__PublishableKey` på servern. Databaslösenord ska aldrig läggas i klientprojektet eller i `wwwroot`. Befintlig Supabase-databas används; webbkonverteringen kräver ingen ny databas eller migration.
+
+Direktlänkar till `/pizzerian`, `/sperring` och `/settings` fungerar också vid omladdning. Inloggningen ligger i webbläsarflikens minne: en omladdning eller ny flik kräver ny inloggning. Varje flik har sin egen session. Dörranimationerna, profilbilder och rollkontroller finns kvar.
+
+Render-publicering återstår som separat steg: Docker-konfiguration, miljövariabler, port och betrodda proxyinställningar behöver anpassas innan driftsättning. Den här konverteringen publicerar ingenting automatiskt.

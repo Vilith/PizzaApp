@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <ProjectReference Include="../PizzaApp.Shared/PizzaApp.Shared.csproj" />
+    <ProjectReference Include="../PizzaApp/PizzaApp.csproj" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">

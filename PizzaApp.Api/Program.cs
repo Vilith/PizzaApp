@@ -18,6 +18,7 @@ namespace PizzaApp.Api
 
             builder.Services.AddControllers();            
             builder.Services.AddOpenApi();
+            builder.Services.AddProblemDetails();
             builder.Services.AddSingleton(TimeProvider.System);
             builder.Services.Configure<OrderingOptions>(builder.Configuration.GetSection("Ordering"));
             builder.Services.AddScoped<OrderService>();
@@ -54,15 +55,23 @@ namespace PizzaApp.Api
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
+                app.UseWebAssemblyDebugging();
             }
+            else app.UseExceptionHandler();
 
             app.UseHttpsRedirection();
+            // The app shell is public; API endpoints still enforce authentication.
+            app.UseBlazorFrameworkFiles();
+            app.UseStaticFiles();
             app.UseRouting();
             app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();
+            // Unknown API URLs must not return the SPA's HTML document.
+            app.MapFallback("/api/{**path}", () => Results.NotFound());
+            app.MapFallbackToFile("index.html").AllowAnonymous();
 
             app.Run();
         }

@@ -2,11 +2,42 @@ using System.Net;
 using System.Net.Http.Json;
 using PizzaApp.Services;
 using PizzaApp.Shared;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace PizzaApp.Tests;
 
 public class AuthServiceTests
 {
+    [Fact]
+    public async Task Browser_http_clients_share_login_but_separate_browser_containers_do_not()
+    {
+        var services = new ServiceCollection();
+        services.AddPizzaBrowserClient(new Uri("https://api.example.test/"));
+        services.AddHttpClient("PublicApi").ConfigurePrimaryHttpMessageHandler(() => new Backend());
+        services.AddHttpClient("SupabaseAuth").ConfigurePrimaryHttpMessageHandler(() => new Backend());
+        services.AddHttpClient<IOrderApiService, OrderApiService>()
+            .ConfigurePrimaryHttpMessageHandler(() => new BrowserOrderHandler());
+        using var browser = services.BuildServiceProvider();
+        using var otherBrowser = services.BuildServiceProvider();
+        var auth = browser.GetRequiredService<IAuthService>();
+        await auth.SignInAsync("Anna", "password");
+        var orders = browser.GetRequiredService<IOrderApiService>();
+        Assert.Empty((await orders.GetTodayAsync(1)).Orders);
+        Assert.Null(otherBrowser.GetRequiredService<IAuthService>().User);
+        await auth.SignOutAsync();
+        await Assert.ThrowsAsync<AuthException>(() => orders.GetTodayAsync(1));
+    }
+
+    private sealed class BrowserOrderHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Assert.Equal("https://api.example.test/api/restaurants/1/orders", request.RequestUri!.AbsoluteUri);
+            Assert.Equal("login-token", request.Headers.Authorization?.Parameter);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new DailyOrderList()) });
+        }
+    }
+
     [Fact]
     public async Task Login_uses_server_profile_refreshes_once_and_logout_clears_credentials()
     {

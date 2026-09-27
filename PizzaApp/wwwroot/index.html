@@ -2,8 +2,8 @@
 <html lang="sv">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>PizzaApp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Benders dörr – Pizza-appen</title>
     <base href="/" />
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
@@ -16,7 +16,8 @@
 
     <div class="status-bar-safe-area"></div>
 
-    <div id="app">Startar PizzaApp…</div>
+    <div id="app"><p class="startup-message" role="status">Startar Pizza-appen…</p></div>
+    <noscript>Aktivera JavaScript i webbläsaren för att använda Pizza-appen.</noscript>
 
     <div id="entrance" class="entrance" hidden>
         <div class="entrance-scene" aria-hidden="true">
@@ -37,13 +38,13 @@
     </div>
 
     <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="" class="reload">Reload</a>
-        <a class="dismiss">🗙</a>
+        Något gick fel. Ladda om sidan och logga in igen.
+        <a href="" class="reload">Ladda om</a>
+        <button class="dismiss" type="button" aria-label="Stäng felmeddelandet">×</button>
     </div>
 
     <script src="js/entrance.js"></script>
-    <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
 
 </body>
 

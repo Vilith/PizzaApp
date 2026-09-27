@@ -1,0 +1,8 @@
+[
+  {
+    "Name": "Webbapp",
+    "Projects": [
+      { "Path": "PizzaApp.Api\\PizzaApp.Api.csproj", "Action": "Start", "DebugTarget": "https" }
+    ]
+  }
+]

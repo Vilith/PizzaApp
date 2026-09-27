@@ -7,7 +7,7 @@ using PizzaApp.Shared;
 namespace PizzaApp.Services;
 
 // Tokens only live in memory. No password or session is written to local files or
-// browser storage. Closing the app requires signing in again.
+// browser storage. Reloading or closing the browser tab requires signing in again.
 public sealed class AuthService(IHttpClientFactory clients) : IAuthService
 {
     private readonly SemaphoreSlim gate = new(1, 1);

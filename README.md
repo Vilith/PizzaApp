@@ -86,4 +86,4 @@ Kör `dotnet PizzaApp.Api.dll` från publiceringskatalogen på en server med ASP
 
 Direktlänkar till `/pizzerian`, `/sperring` och `/settings` fungerar också vid omladdning. Inloggningen ligger i webbläsarflikens minne: en omladdning eller ny flik kräver ny inloggning. Varje flik har sin egen session. Dörranimationerna, profilbilder och rollkontroller finns kvar.
 
-Render-publicering återstår som separat steg: Docker-konfiguration, miljövariabler, port och betrodda proxyinställningar behöver anpassas innan driftsättning. Den här konverteringen publicerar ingenting automatiskt.
+Render: välj Web Service, Docker, Dockerfile i repots rot och port 10000. Dockerfile och .dockerignore finns för att publicera webbapp och API tillsammans. Ange serverns miljövariabler i Render. Containerbygget behöver verifieras där eftersom Docker inte finns i den lokala miljön. HTTPS hanteras av Render. Proxyinställningar för klient-IP behöver verifieras vid driftsättning; utan dem kan inloggningens hastighetsbegränsning delas av flera användare bakom samma proxy. Ingenting publiceras automatiskt av den lokala konverteringen.

@@ -1,4 +1,8 @@
 @page "/"
+@page "/pizzerian"
+@page "/sperring"
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 @inject IOrderApiService OrderApiService
 @inject IRestaurantApiService RestaurantApiService
 @inject IAuthService Auth
@@ -14,22 +18,10 @@ else if (string.IsNullOrWhiteSpace(Auth.User.DisplayName))
 }
 else
 {
-<div class="restaurant-toolbar">
-    <span class="profile-identity">
-        @if (Auth.User.AvatarDataUrl != null) { <img src="@Auth.User.AvatarDataUrl" alt="Din profilbild" width="36" height="36" /> }
-        @Auth.User.DisplayName · @(Auth.User.IsAdmin ? "Administratör" : "Användare")
-    </span>
-    <a href="/settings" data-action="settings">Inställningar</a>
-    <button class="text-button" data-action="logout" disabled="@(busy || loading)" @onclick="SignOut">Logga ut</button>
-</div>
-
-@if (restaurant == null)
+@if (CurrentSection == "")
 {
-    <div class="intro">
-        <p class="eyebrow">DAGENS LUNCH</p>
-        <h1>Vad vill du beställa?</h1>
-        <p>Välj restaurang och spara ditt val. Vi samlar dagens beställningar åt den som ringer.</p>
-    </div>
+    <section class="restaurant-lobby" aria-labelledby="lobby-heading">
+    <h1 id="lobby-heading">Välj din dörr</h1>
     @if (loading)
     {
         <p role="status">Laddar restauranger…</p>
@@ -37,32 +29,27 @@ else
     else
     {
         <div class="restaurant-grid">
-            @foreach (var item in restaurants)
+            @foreach (var item in restaurants.Where(r => r.IsPizzeria || r.Name.Equals("Sperring", StringComparison.OrdinalIgnoreCase)).OrderByDescending(r => r.IsPizzeria))
             {
-                <button class="restaurant-card" data-restaurant="@item.Id" @onclick="() => SelectRestaurant(item)">
-                    <span class="food-symbol" aria-hidden="true">@(item.IsPizzeria ? "◔" : "♧")</span>
-                    <span class="restaurant-copy">
-                        <strong>@(item.IsPizzeria ? "Pizzeria" : "À la carte")</strong>
-                        <span class="restaurant-name">@item.Name</span>
-                        <span>@(item.IsPizzeria ? "Välj pizza, sås och dryck." : "Välj din rätt och antal portioner.")</span>
-                        <span class="card-tag">@(item.IsPizzeria ? "Beställ senast 11:15" : "Egen beställningslista")</span>
-                    </span>
-                    <span class="card-arrow" aria-hidden="true">→</span>
+                <button class="restaurant-card" data-restaurant="@item.Id" @onclick="() => OpenRestaurant(item)">
+                    <span class="door-window"><strong>@(item.IsPizzeria ? "Pizza" : "Sperring")</strong><span>Välkommen in</span></span>
+                    <span class="door-panel" aria-hidden="true"></span>
+                    <span class="door-handle" aria-hidden="true"></span>
                 </button>
             }
         </div>
         @if (restaurants.Count == 0 && error == null) { <p>Det finns inga restauranger ännu.</p> }
-        <div class="info-note">Alla kan se dagens lista. Du kan ändra dina egna beställningar. Administratörer kan hantera alla beställningar och avsluta dagen.</div>
     }
+    </section>
 }
-else
+else if (restaurant != null)
 {
     <div class="restaurant-toolbar">
-        <button class="text-button" data-action="restaurants" disabled="@(busy || loading)" @onclick="Back">← Byt restaurang</button>
-        <span class="restaurant-label">@(restaurant.IsPizzeria ? "Pizzeria" : "À la carte")</span>
+        <button class="text-button" data-action="restaurants" disabled="@(busy || loading)" @onclick="Back">← Till startsidan</button>
+        <span class="restaurant-label">@(restaurant.IsPizzeria ? "Pizzerian" : "Sperring")</span>
     </div>
     <div class="page-heading">
-        <div><p class="eyebrow">@restaurant.Name</p><h1>Vad blir det till lunch?</h1></div>
+        <div><p class="eyebrow">@restaurant.Name</p><h1>@(restaurant.IsPizzeria ? "Pizzerian" : "Sperring")</h1></div>
         @if (daily != null)
         {
             <a class="list-link" href="#daily-list">Dagens lista <span>@(daily.CollectedAt == null ? daily.Orders.Sum(o => o.Quantity) : 0)</span></a>
@@ -226,6 +213,10 @@ else
         </section>
     }
 }
+@if (CurrentSection != "" && restaurant == null && loading)
+{
+    <p role="status">Laddar restaurangen…</p>
+}
 @if (error != null)
 {
     <div class="alert alert-danger mt-3" role="alert">@error</div>
@@ -235,13 +226,31 @@ else
 }
 
 @code {
+    private string CurrentSection => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/').ToLowerInvariant();
+    private async Task OpenRestaurant(Restaurant item)
+    {
+        try { await JS.InvokeVoidAsync("pizzaEntrance.play", item.IsPizzeria ? "Pizza" : "Sperring"); }
+        catch (JSException) { /* Navigation still works if the optional animation fails. */ }
+        Navigation.NavigateTo(item.IsPizzeria ? "/pizzerian" : "/sperring");
+    }
+    private void LocationChanged(object? sender, LocationChangedEventArgs args) => _ = InvokeAsync(async () =>
+    {
+        loadVersion++;
+        if (CurrentSection is not ("" or "pizzerian" or "sperring")) return;
+        restaurant = null; daily = null; input = null; menu = [];
+        editingId = deleteId = null; error = success = null;
+        if (!string.IsNullOrWhiteSpace(Auth.User?.DisplayName)) await LoadRestaurants();
+        StateHasChanged();
+    });
     private Guid? loadedUser;
+    private int loadVersion;
     private bool CanEdit(OrderDetails order) => Auth.User is { } user && (user.IsAdmin || order.OwnerUserId == user.Id);
 
     private void AuthChanged() => _ = InvokeAsync(async () =>
     {
         if (loadedUser != Auth.User?.Id)
         {
+            loadVersion++;
             loadedUser = Auth.User?.Id;
             restaurant = null; daily = null; input = null; menu = []; restaurants = [];
             editingId = deleteId = null; error = success = null;
@@ -251,14 +260,12 @@ else
         StateHasChanged();
     });
 
-    private async Task SignOut()
+    public void Dispose()
     {
-        if (busy || loading) return;
-        try { await Auth.SignOutAsync(); }
-        catch (Exception ex) when (IsConnectionError(ex)) { /* Local session is always cleared. */ }
+        loadVersion++;
+        Auth.Changed -= AuthChanged;
+        Navigation.LocationChanged -= LocationChanged;
     }
-
-    public void Dispose() => Auth.Changed -= AuthChanged;
     private List<Restaurant> restaurants = [];
     private List<MenuItem> menu = [];
     private Restaurant? restaurant;
@@ -275,6 +282,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         Auth.Changed += AuthChanged;
+        Navigation.LocationChanged += LocationChanged;
         loadedUser = Auth.User?.Id;
         if (!string.IsNullOrWhiteSpace(Auth.User?.DisplayName)) await LoadRestaurants();
         else loading = false;
@@ -285,29 +293,47 @@ else
 
     private async Task LoadRestaurants()
     {
+        var version = loadVersion;
         loading = true; error = null;
-        try { restaurants = await RestaurantApiService.GetRestaurantsAsync(); }
-        catch (Exception ex) when (IsConnectionError(ex)) { error = "Kunde inte hämta restaurangerna. Kontrollera anslutningen och försök igen."; }
-        finally { loading = false; }
+        try
+        {
+            var result = await RestaurantApiService.GetRestaurantsAsync();
+            if (version != loadVersion) return;
+            restaurants = result;
+            if (CurrentSection != "")
+            {
+                var selected = restaurants.FirstOrDefault(r => CurrentSection == "pizzerian"
+                    ? r.IsPizzeria : r.Name.Equals("Sperring", StringComparison.OrdinalIgnoreCase));
+                if (selected != null) await SelectRestaurant(selected);
+                else error = "Restaurangen kunde inte hittas.";
+            }
+        }
+        catch (Exception ex) when (IsConnectionError(ex)) { if (version == loadVersion) error = "Kunde inte hämta restaurangerna. Kontrollera anslutningen och försök igen."; }
+        finally { if (version == loadVersion) loading = false; }
     }
 
     private async Task SelectRestaurant(Restaurant selected)
     {
-        if (busy) return;
+        var version = loadVersion;
         restaurant = selected; daily = null; menu = []; input = null; editingId = deleteId = null;
         loading = true; error = success = null;
         try
         {
-            menu = await RestaurantApiService.GetMenuAsync(selected.Id);
+            var result = await RestaurantApiService.GetMenuAsync(selected.Id);
+            if (version != loadVersion) return;
+            menu = result;
             await LoadList();
         }
-        catch (Exception ex) when (IsConnectionError(ex)) { error = "Kunde inte hämta menyn och dagens lista. Försök igen."; }
-        finally { loading = false; }
+        catch (Exception ex) when (IsConnectionError(ex)) { if (version == loadVersion) error = "Kunde inte hämta menyn och dagens lista. Försök igen."; }
+        finally { if (version == loadVersion) loading = false; }
     }
 
     private async Task LoadList()
     {
-        daily = await OrderApiService.GetTodayAsync(restaurant!.Id);
+        var version = loadVersion;
+        var result = await OrderApiService.GetTodayAsync(restaurant!.Id);
+        if (version != loadVersion) return;
+        daily = result;
         lastRefreshed = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "Europe/Stockholm").ToString("HH:mm:ss");
     }
 
@@ -329,10 +355,13 @@ else
     private async Task UpdateCollection(Func<Task<DailyOrderList>> action)
     {
         if (busy || daily == null || daily.CollectedAt != null) return;
+        var version = loadVersion;
         busy = true; error = success = null;
         try
         {
-            daily = await action();
+            var result = await action();
+            if (version != loadVersion) return;
+            daily = result;
             if (daily.CollectedAt != null) { CancelEdit(); deleteId = null; }
         }
         catch (OrderApiException ex) { error = ex.Message; }
@@ -342,7 +371,7 @@ else
     }
 
     private Task Reload() => restaurant == null ? LoadRestaurants() : daily == null ? SelectRestaurant(restaurant) : Refresh();
-    private void Back() { if (busy || loading) return; restaurant = null; input = null; daily = null; error = success = null; }
+    private void Back() { if (busy || loading) return; Navigation.NavigateTo("/"); }
     private void CancelEdit() { input = null; editingId = null; }
     private void SelectItem(MenuItem item)
     {
@@ -361,12 +390,14 @@ else
     private async Task Save()
     {
         if (busy || input == null || restaurant == null || daily?.IsLocked != false) return;
+        var version = loadVersion;
         if (restaurant.IsPizzeria && (string.IsNullOrEmpty(input.Sauce) || string.IsNullOrEmpty(input.Drink)))
         { error = "Välj sås och dryck innan du sparar."; return; }
         busy = true; error = success = null;
         try
         {
             await OrderApiService.SaveAsync(restaurant.Id, input, editingId);
+            if (version != loadVersion) return;
             input = null; editingId = null;
             success = "Beställningen är sparad i dagens lista.";
             try { await LoadList(); }
@@ -381,10 +412,12 @@ else
     private async Task Delete(OrderDetails order)
     {
         if (busy || restaurant == null || daily?.IsLocked != false) return;
+        var version = loadVersion;
         busy = true; error = success = null;
         try
         {
             await OrderApiService.DeleteAsync(restaurant.Id, order.Id, order.Revision);
+            if (version != loadVersion) return;
             deleteId = null;
             if (editingId == order.Id) CancelEdit();
             success = "Beställningen är borttagen.";

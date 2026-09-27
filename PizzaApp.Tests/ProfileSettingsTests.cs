@@ -35,11 +35,12 @@ public class ProfileSettingsTests : TestContext
     public void Settings_requires_nickname_and_signed_out_users_see_login()
     {
         auth.User = auth.User! with { DisplayName = "" };
+        var layout = RenderComponent<PizzaApp.Components.Layout.MainLayout>();
         var page = RenderComponent<ProfileSettings>();
         page.Find("form").Submit();
         Assert.Contains("Ange ditt namn eller nick", page.Markup);
         Assert.Equal("", auth.User!.DisplayName);
-        page.Find(".profile-toolbar button").Click();
+        layout.Find("[data-action='logout']").Click();
         page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("#login-alias")));
         Assert.Empty(page.FindAll("#profile-name"));
     }

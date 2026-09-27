@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -7,6 +7,7 @@
     <base href="/" />
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/entrance.css" />
     <link rel="stylesheet" href="PizzaApp.styles.css" />
     <link rel="icon" href="data:,">
 </head>
@@ -15,7 +16,25 @@
 
     <div class="status-bar-safe-area"></div>
 
-    <div id="app">Loading...</div>
+    <div id="app">Startar PizzaApp…</div>
+
+    <div id="entrance" class="entrance" hidden>
+        <div class="entrance-scene" aria-hidden="true">
+            <div class="entrance-wall">
+                <div class="entrance-sign"><strong>Benders dörr</strong><small>Pizza-appen</small></div>
+                <div class="entrance-doorway">
+                    <div class="entrance-interior"></div>
+                    <div class="entrance-door">
+                        <div class="entrance-window"><span>Välkommen in</span></div>
+                        <div class="entrance-panel"></div>
+                        <div class="entrance-handle"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="entrance-caption" role="status">Välkommen in till dagens lunch.</div>
+        <button id="entrance-skip" class="entrance-skip" type="button">Hoppa över <span aria-hidden="true">→</span></button>
+    </div>
 
     <div id="blazor-error-ui">
         An unhandled error has occurred.
@@ -23,6 +42,7 @@
         <a class="dismiss">🗙</a>
     </div>
 
+    <script src="js/entrance.js"></script>
     <script src="_framework/blazor.webview.js" autostart="false"></script>
 
 </body>

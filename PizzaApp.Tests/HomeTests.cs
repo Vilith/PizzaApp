@@ -13,9 +13,53 @@ public class HomeTests : TestContext
     private readonly FakeAuth auth = new();
     public HomeTests()
     {
+        JSInterop.SetupVoid("pizzaEntrance.play").SetVoidResult();
+        JSInterop.SetupVoid("pizzaEntrance.play", "Pizza").SetVoidResult();
+        JSInterop.SetupVoid("pizzaEntrance.play", "Sperring").SetVoidResult();
         Services.AddSingleton<IAuthService>(auth);
         Services.AddSingleton<IOrderApiService>(orders);
         Services.AddSingleton<IRestaurantApiService>(new FakeRestaurants());
+    }
+
+    [Fact]
+    public void Landing_page_has_two_choices_and_no_order_list()
+    {
+        var page = RenderComponent<Home>();
+        Assert.Equal(2, page.FindAll(".restaurant-card").Count);
+        Assert.Contains("Pizza", page.Find("[data-restaurant='1']").TextContent);
+        Assert.Contains("Sperring", page.Find("[data-restaurant='2']").TextContent);
+        Assert.Empty(page.FindAll("#daily-list, .menu-list"));
+        page.Find("[data-restaurant='1']").Click();
+        Assert.EndsWith("/pizzerian", Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri);
+        page.Find("[data-action='restaurants']").Click();
+        Assert.Equal(2, page.FindAll(".restaurant-card").Count);
+        Assert.Empty(page.FindAll("#daily-list, .menu-list"));
+    }
+
+    [Theory]
+    [InlineData("/pizzerian", "Pizzerian", "Vesuvio", "Dagens rätt")]
+    [InlineData("/sperring", "Sperring", "Dagens rätt", "Vesuvio")]
+    public void Direct_address_loads_only_the_selected_restaurant(string path, string title, string dish, string otherDish)
+    {
+        Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo(path);
+        var page = RenderComponent<Home>();
+        Assert.Equal(title, page.Find("h1").TextContent);
+        Assert.Contains(dish, page.Markup);
+        Assert.DoesNotContain(otherDish, page.Markup);
+        Assert.Empty(page.FindAll(".restaurant-card"));
+    }
+
+    [Fact]
+    public void Navigating_between_restaurant_addresses_clears_the_previous_selection()
+    {
+        var navigation = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+        navigation.NavigateTo("/pizzerian");
+        var page = RenderComponent<Home>();
+        page.Find("[data-menu-item='2']").Click();
+        navigation.NavigateTo("/sperring");
+        Assert.Equal("Sperring", page.Find("h1").TextContent);
+        Assert.Empty(page.FindAll("#sauce, #drink, form"));
+        Assert.DoesNotContain("Vesuvio", page.Markup);
     }
 
     [Fact]
@@ -159,6 +203,7 @@ public class HomeTests : TestContext
     public void Signed_out_users_only_see_login_and_logout_clears_loaded_orders()
     {
         auth.User = null;
+        var layout = RenderComponent<PizzaApp.Components.Layout.MainLayout>();
         var page = RenderComponent<Home>();
         Assert.NotEmpty(page.FindAll("#login-alias"));
         Assert.Empty(page.FindAll("[data-restaurant]"));
@@ -167,7 +212,7 @@ public class HomeTests : TestContext
         page.Find("form").Submit();
         page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("[data-restaurant='1']")));
         page.Find("[data-restaurant='1']").Click();
-        page.Find("[data-action='logout']").Click();
+        layout.Find("[data-action='logout']").Click();
         page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("#login-alias")));
         Assert.Empty(page.FindAll("#daily-list"));
     }
@@ -193,18 +238,19 @@ public class HomeTests : TestContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
         auth.User = auth.User! with { DisplayName = "" };
+        var layout = RenderComponent<PizzaApp.Components.Layout.MainLayout>();
         var page = RenderComponent<Home>();
         Assert.NotEmpty(page.FindAll("#profile-name"));
         Assert.Empty(page.FindAll("[data-restaurant]"));
         page.Find("#profile-name").Change("Pizzafan");
         page.Find("form").Submit();
         page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("[data-restaurant='1']")));
-        Assert.Contains("Pizzafan", page.Find(".profile-identity").TextContent);
+        Assert.Contains("Pizzafan", layout.Find(".profile-identity").TextContent);
         page.Find("[data-restaurant='1']").Click();
         page.Find("[data-menu-item='2']").Click();
         Assert.Contains("Pizzafan", page.Find(".order-profile-name").TextContent);
         Assert.Empty(page.FindAll("#customer-name"));
-        Assert.Equal("/settings", page.Find("[data-action='settings']").GetAttribute("href"));
+        Assert.Equal("/settings", layout.Find("[data-action='settings']").GetAttribute("href"));
     }
 
     private class FakeRestaurants : IRestaurantApiService

@@ -1,9 +1,45 @@
 @inherits LayoutComponentBase
+@inject IAuthService Auth
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <div class="app-shell">
-    <header class="app-header">
-        <a href="" class="brand"><span class="brand-icon" aria-hidden="true">P</span> PizzaApp</a>
-        <span>Lunch tillsammans</span>
-    </header>
+    @if (Auth.User is { } user)
+    {
+        <nav class="app-header" aria-label="Huvudnavigation">
+            <a href="/" class="home-link">Startsida</a>
+            <span class="profile-identity">
+                @if (user.AvatarDataUrl != null) { <img src="@user.AvatarDataUrl" alt="" width="32" height="32" /> }
+                <span>@user.DisplayName</span>
+            </span>
+            <a href="/settings" class="nav-action" data-action="settings">Inställningar</a>
+            <button class="nav-action" data-action="logout" disabled="@signingOut" @onclick="SignOut">@(signingOut ? "Loggar ut…" : "Logga ut")</button>
+        </nav>
+        @if (error != null) { <p class="alert alert-danger" role="alert">@error</p> }
+    }
     <main class="app-content">@Body</main>
 </div>
+
+@code {
+    private bool signingOut;
+    private string? error;
+    protected override void OnInitialized() => Auth.Changed += AuthChanged;
+    private void AuthChanged() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => Auth.Changed -= AuthChanged;
+
+    private async Task SignOut()
+    {
+        if (signingOut) return;
+        signingOut = true; error = null;
+        try { await Auth.SignOutAsync(); }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or AuthException or System.Text.Json.JsonException)
+        {
+            if (Auth.User != null) error = "Kunde inte logga ut. Försök igen.";
+        }
+        finally
+        {
+            signingOut = false;
+            if (Auth.User == null) Navigation.NavigateTo("/");
+        }
+    }
+}

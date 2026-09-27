@@ -11,7 +11,6 @@ else
     <section class="profile-panel" aria-labelledby="profile-heading">
         <div class="profile-toolbar">
             @if (!string.IsNullOrWhiteSpace(Auth.User.DisplayName)) { <a href="/">← Till beställningarna</a> }
-            <button class="btn btn-link" disabled="@busy" @onclick="SignOut">Logga ut</button>
         </div>
         <p class="eyebrow">MIN PROFIL</p>
         <h1 id="profile-heading">@(string.IsNullOrWhiteSpace(Auth.User.DisplayName) ? "Välj ditt namn eller nick" : "Inställningar")</h1>
@@ -112,12 +111,4 @@ else
         finally { busy = false; }
     }
     private void RemovePhoto() { input.AvatarDataUrl = null; error = success = null; }
-    private async Task SignOut()
-    {
-        if (busy) return;
-        busy = true;
-        try { await Auth.SignOutAsync(); }
-        catch (Exception ex) when (IsConnectionError(ex)) { /* Local session has already been removed. */ }
-        finally { busy = false; }
-    }
 }

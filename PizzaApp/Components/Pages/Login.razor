@@ -1,4 +1,5 @@
 @inject IAuthService Auth
+@inject IJSRuntime JS
 
 @if (registering)
 {
@@ -37,7 +38,12 @@ else
     {
         if (busy) return;
         busy = true; error = null;
-        try { await Auth.SignInAsync(credentials.Alias, credentials.Password); }
+        try
+        {
+            await Auth.SignInAsync(credentials.Alias, credentials.Password);
+            try { await JS.InvokeVoidAsync("pizzaEntrance.play"); }
+            catch (JSException) { /* An optional animation must not prevent signing in. */ }
+        }
         catch (AuthException ex) { error = ex.Message; }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         { error = "Kunde inte ansluta till inloggningen. Kontrollera anslutningen och försök igen."; }

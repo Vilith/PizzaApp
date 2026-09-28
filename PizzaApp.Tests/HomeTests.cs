@@ -188,7 +188,7 @@ public class HomeTests : TestContext
         page.Find("[data-action='complete']").Click();
         page.WaitForAssertion(() => Assert.Contains("Hämtad och sparad i historiken", page.Markup));
         Assert.Empty(page.FindAll("#daily-list .order-row, #daily-list .summary-box, #daily-list details, [data-action='complete']"));
-        Assert.Equal("0", page.Find(".list-link span").TextContent);
+        Assert.Empty(page.FindAll(".list-link"));
         Assert.DoesNotContain("Ingen har beställt ännu", page.Markup);
         page.Find("#daily-list .btn-outline-primary").Click();
         page.WaitForAssertion(() => Assert.Contains("Dagens lista är rensad", page.Markup));
@@ -271,7 +271,7 @@ public class HomeTests : TestContext
     }
 
     [Fact]
-    public void Selection_defaults_sauce_centers_form_and_daily_list_stays_on_page()
+    public void Selection_defaults_sauce_centers_form_and_has_no_redundant_list_button()
     {
         var navigation = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
         navigation.NavigateTo("/pizzerian");
@@ -280,9 +280,8 @@ public class HomeTests : TestContext
         Assert.Equal("Ingen sås", page.Find("#sauce").GetAttribute("value"));
         Assert.Equal(PizzaChoices.Drinks, page.FindAll("#drink option").Skip(1).Select(o => o.TextContent));
         Assert.Contains(JSInterop.Invocations, call => call.Identifier == "pizzaPage.center" && Equals(call.Arguments[0], "selection-panel"));
-        page.Find(".list-link").Click();
+        Assert.Empty(page.FindAll(".list-link"));
         Assert.EndsWith("/pizzerian", navigation.Uri);
-        Assert.Contains(JSInterop.Invocations, call => call.Identifier == "pizzaPage.center" && Equals(call.Arguments[0], "daily-list"));
     }
 
     [Theory]

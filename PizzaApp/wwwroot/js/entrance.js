@@ -121,16 +121,3 @@ window.pizzaEntrance = (() => {
         };
     }
 })();
-
-window.pizzaPage = {
-    center(id) {
-        const target = document.getElementById(id);
-        if (!target) return;
-        if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
-        target.focus({ preventScroll: true });
-        target.scrollIntoView({
-            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-            block: 'center'
-        });
-    }
-};

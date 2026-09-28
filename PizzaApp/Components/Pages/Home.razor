@@ -50,10 +50,6 @@ else if (restaurant != null)
     </div>
     <div class="page-heading">
         <div><p class="eyebrow">@restaurant.Name</p><h1>@(restaurant.IsPizzeria ? "Pizzerian" : "Sperring")</h1></div>
-        @if (daily != null)
-        {
-            <button type="button" class="list-link" @onclick="ShowDailyList">Dagens lista <span>@(daily.CollectedAt == null ? daily.Orders.Sum(o => o.Quantity) : 0)</span></button>
-        }
     </div>
     @if (loading)
     {
@@ -321,7 +317,6 @@ else if (restaurant != null)
         : item.Category;
     private string ActiveTab => activeTab ?? menu.Select(MenuTab).FirstOrDefault() ?? "";
     private static string TabId(string tab) => "tab-" + tab.Replace(' ', '-');
-    private async Task ShowDailyList() => await JS.InvokeVoidAsync("pizzaPage.center", "daily-list");
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!focusSelection) return;

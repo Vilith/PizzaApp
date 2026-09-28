@@ -29,7 +29,7 @@ public class OrderServiceTests : IDisposable
     }
 
     private static OrderInput Pizza(int quantity = 1, string sauce = "Vitlökssås") => new()
-    { MenuItemId = 2, Quantity = quantity, Sauce = sauce, Drink = "Vatten" };
+    { MenuItemId = 2, Quantity = quantity, Sauce = sauce, Drink = "Coca-Cola 33cl" };
 
     [Fact]
     public async Task Collector_choice_does_not_change_another_account_with_the_same_name()
@@ -104,11 +104,11 @@ public class OrderServiceTests : IDisposable
         await service.SaveAsync(1, Pizza(1, "Ingen sås"));
         var special = Pizza(); special.Comment = "Utan ost";
         await service.SaveAsync(1, special);
-        var drink = Pizza(); drink.Drink = "Fanta 33 cl";
+        var drink = Pizza(); drink.Drink = "Fanta 33cl";
         await service.SaveAsync(1, drink);
         var summary = (await service.GetTodayAsync(1)).Summary;
         Assert.Equal(4, summary.Count);
-        Assert.Contains(summary, s => s.Quantity == 5 && s.Sauce == "Vitlökssås" && s.Drink == "Vatten");
+        Assert.Contains(summary, s => s.Quantity == 5 && s.Sauce == "Vitlökssås" && s.Drink == "Coca-Cola 33cl");
         Assert.Contains(summary, s => s.Comment == "Utan ost" && s.Quantity == 1);
     }
 
@@ -162,11 +162,11 @@ public class OrderServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(0, "Vitlökssås", "Vatten")]
-    [InlineData(100, "Vitlökssås", "Vatten")]
-    [InlineData(1, null, "Vatten")]
+    [InlineData(0, "Vitlökssås", "Coca-Cola 33cl")]
+    [InlineData(100, "Vitlökssås", "Coca-Cola 33cl")]
+    [InlineData(1, null, "Coca-Cola 33cl")]
     [InlineData(1, "Vitlökssås", null)]
-    [InlineData(1, "Fel sås", "Vatten")]
+    [InlineData(1, "Fel sås", "Coca-Cola 33cl")]
     public async Task Invalid_quantity_or_missing_choices_cannot_be_saved(int quantity, string? sauce, string? drink)
     {
         var input = Pizza(quantity); input.Sauce = sauce; input.Drink = drink;
@@ -205,7 +205,7 @@ public class OrderServiceTests : IDisposable
         await service.CompleteAsync(1, request);
         Assert.Single(db.CompletedOrderDays);
         var snapshot = System.Text.Json.JsonSerializer.Deserialize<List<OrderDetails>>((await db.CompletedOrderDays.SingleAsync()).OrdersJson)!;
-        Assert.Equal(95m, Assert.Single(snapshot).UnitPrice);
+        Assert.Equal(85m, Assert.Single(snapshot).UnitPrice);
         Assert.Equal(3, snapshot[0].Quantity);
         Assert.Equal(input.Sauce, snapshot[0].Sauce);
         Assert.Equal(input.Drink, snapshot[0].Drink);
@@ -248,14 +248,14 @@ public class OrderServiceTests : IDisposable
         input.Revision = order.Revision;
         input.Comment = "Utan lök";
         order = await service.SaveAsync(1, input, order.Id);
-        Assert.Equal(95m, order.UnitPrice);
+        Assert.Equal(85m, order.UnitPrice);
         Assert.Equal(120m, (await service.SaveAsync(1, Pizza())).UnitPrice);
         var day = await service.SetCollectorAsync(1, order.Id, new(true, order.Revision, order.OrderDate));
         await service.CompleteAsync(1, new(day.Date, day.Orders.ToDictionary(o => o.Id, o => o.Revision)));
         menuItem.Price = 150m;
         await db.SaveChangesAsync();
         var snapshot = System.Text.Json.JsonSerializer.Deserialize<List<OrderDetails>>((await db.CompletedOrderDays.SingleAsync()).OrdersJson)!;
-        Assert.Equal(310m, snapshot.Sum(o => o.UnitPrice * o.Quantity));
+        Assert.Equal(290m, snapshot.Sum(o => o.UnitPrice * o.Quantity));
     }
 
     [Fact]

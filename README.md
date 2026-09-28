@@ -7,7 +7,7 @@ Inloggning krävs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för Supabase-konfiguration
 ## Flöde
 
 - Välj **Skapa konto**, ange nick, e-post och lösenord. Kontot blir klart direkt, utan mejlkod eller administratörsgodkännande. Logga in med ditt alias och lösenord. Äldre konton utan profil väljer nick via Slutför befintligt konto. Välj därefter Pizzeria (Kvänum Pizzeria) eller À la carte (Sperring).
-- Pizzeria: välj pizza, sås (inklusive Ingen sås), dryck och antal.
+- Pizzeria: välj rätt via menyflikarna (pizzor 1–12, 13–24, 25–33, 34–43 samt Sallader, Kebab och Stekrätter). Ditt val centreras automatiskt. Första tillgängliga såsen i ingredienslistan förväljs, annars Ingen sås; valet kan ändras. Såser: Vitlökssås, Bearnaisesås, Kebabsås, Kebabsås (Mixad) och Kebabsås (Stark). Drycker: Coca-Cola 33cl, Fanta 33cl, Sprite 33cl och Pepsi Max 33cl. Välj dryck och antal. Dagens lista rullar till listan på samma sida.
 - À la carte: välj rätt och antal, utan sås- eller dryckesval.
 - Ditt profilnamn används automatiskt; du behöver inte fylla i namn vid beställning. Kommentar är valfri. Under **Inställningar** kan du ändra nick samt välja eller ta bort en profilbild. Nya beställningar får det nya namnet; redan sparade beställningar och historiken behåller sitt ursprungliga namn.
 - ”Att ringa in” visar beställarnas namn med kryssrutor för vilka som kan hämta. Samma konto och namn visas en gång; olika konton hålls isär även om namnet är samma. Namnlösa beställningar behöver ett namn innan de kan väljas som hämtare.
@@ -21,7 +21,7 @@ Inloggning krävs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för Supabase-konfiguration
 
 Förutsätter .NET 10 SDK 10.0.401 (eller senare patch i 10.0.4xx), valfritt Visual Studio 2026 med arbetsbelastningen ASP.NET och webbutveckling, samt databasanslutning i API-projektets User Secrets (`ConnectionStrings:DefaultConnection`). User Secrets konfigureras separat på varje dator. För Supabase-pooler ska projektidentifieraren sitta i `Username=postgres.<projekt-id>`, medan databasnamnet är `Database=postgres`.
 
-Den nya modellen kräver migrationerna till och med `UniqueAliases`. Konfigurera Supabase Auth och stäng av Confirm email enligt installationsguiden. Kör från lösningens katalog mot avsedd databas:
+Den nya modellen kräver migrationerna till och med `CompletePizzeriaMenuSections`. Konfigurera Supabase Auth och stäng av Confirm email enligt installationsguiden. Kör från lösningens katalog mot avsedd databas:
 
 ```powershell
 dotnet tool restore
@@ -31,7 +31,7 @@ dotnet run --project PizzaApp.Api --launch-profile https
 
 Öppna **https://localhost:7113/** i webbläsaren. I Visual Studio väljer du **PizzaApp.Api** som startprojekt (högerklicka → Ange som startprojekt), eller startprofilen **Webbapp**. Starta inte klientprojektet separat. Vid behov: betro utvecklingscertifikatet med `dotnet dev-certs https --trust`. Klienten använder automatiskt samma adress som webbsidan; `clientsettings.json` behövs inte längre.
 
-Migrationer körs inte automatiskt vid start. Tidigare beställningar bevaras i databasen, men exkluderas från nya dagslistor eftersom den gamla modellen inte sparade vilken restaurang eller menyrätt beställningen tillhörde. Befintliga restauranger och pizzor behålls.
+Migrationer körs inte automatiskt vid start. Tidigare beställningar bevaras i databasen, men exkluderas från nya dagslistor eftersom den gamla modellen inte sparade vilken restaurang eller menyrätt beställningen tillhörde. Befintliga restauranger och pizzornas tidigare ID:n behålls. Migrationen `FullPizzeriaMenu` lägger in Kvänum Pizzerias 43 pizzor med menynummer och ingredienser: nummer 1–12 kostar 85 kr, 13–43 kostar 90 kr förutom nummer 36 (Flygande Tefat) som kostar 100 kr. Tomat och ost ingår i alla pizzor. Migrationen `CompletePizzeriaMenuSections` kompletterar menyn med egna sektioner för 8 sallader (90 kr), 9 kebabrätter/rullar (90 kr) och hamburgare 90gr med bröd och pommes (80 kr). Pizzerians kompletta meny innehåller 61 rätter. Sparade orderpriser och historik ändras inte.
 
 Migrationen `SeedAlaCarteExamples` lägger till de fyra À la carte-rätterna och priserna från wireframen som **exempeldata**, inte som verifierad meny för Sperring. Byt till restaurangens riktiga meny när den finns. Sås- och dryckesvalen är också en första fast lista; inga obekräftade tilläggspriser räknas ut.
 
@@ -72,7 +72,7 @@ TDD-arbetet började med 17 fallerande regeltester och därefter fem fallerande 
 
 Orderrutter: `GET/POST /api/restaurants/{restaurantId}/orders` samt `PUT/DELETE /api/restaurants/{restaurantId}/orders/{id}`. Uppdatering skickar aktuell `revision` i kroppen; borttagning skickar den som queryparameter. Den tidigare `/api/orders`-rutten har ersatts.
 
-Inloggning sker med unikt nick/alias och lösenord. Kör migrationerna till och med `UniqueAliases`; uppgraderingssteg för befintliga konton finns i [AUTH_SETUP.md](AUTH_SETUP.md). E-post anges vid registrering men behöver inte bekräftas. SMTP behövs inte för registreringen.
+Inloggning sker med unikt nick/alias och lösenord. Kör migrationerna till och med `CompletePizzeriaMenuSections`; uppgraderingssteg för befintliga konton finns i [AUTH_SETUP.md](AUTH_SETUP.md). E-post anges vid registrering men behöver inte bekräftas. SMTP behövs inte för registreringen.
 
 ## Publicera webbappen
 

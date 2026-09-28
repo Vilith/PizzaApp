@@ -51,7 +51,7 @@ public class RegistrationApiTests
         var user = (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!;
         Assert.Equal("Pizzafan", user.DisplayName);
         Assert.False(user.IsAdmin);
-        var order = await client.PostAsJsonAsync("/api/restaurants/1/orders", new OrderInput { MenuItemId = 2, Sauce = "Ingen sås", Drink = "Vatten" });
+        var order = await client.PostAsJsonAsync("/api/restaurants/1/orders", new OrderInput { MenuItemId = 2, Sauce = "Ingen sås", Drink = "Coca-Cola 33cl" });
         order.EnsureSuccessStatusCode();
         var saved = (await order.Content.ReadFromJsonAsync<OrderDetails>())!;
         Assert.Equal(user.Id, saved.OwnerUserId);

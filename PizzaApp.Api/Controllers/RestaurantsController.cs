@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PizzaApp.Api.Data;
 using PizzaApp.Api.Models;
@@ -34,6 +34,8 @@ namespace PizzaApp.Api.Controllers
 
             var menuItems = await _context.MenuItems
                 .Where(m => m.RestaurantId == id)
+                .OrderBy(m => m.MenuNumber ?? m.Id)
+                .ThenBy(m => m.Id)
                 .ToListAsync();
 
             return Ok(menuItems);

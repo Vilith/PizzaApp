@@ -82,7 +82,35 @@ public class OrdersApiTests
         var restaurants = await client.GetFromJsonAsync<List<PizzaApp.Models.Restaurant>>("/api/restaurants");
         Assert.True(restaurants!.Single(r => r.Id == 1).IsPizzeria);
         var menu = await client.GetFromJsonAsync<List<PizzaApp.Models.MenuItem>>("/api/restaurants/1/menu");
-        Assert.NotEmpty(menu!);
+        Assert.Equal(61, menu!.Count);
+        var pizzas = menu.Where(m => m.Category == "Pizzor").ToList();
+        Assert.Equal(Enumerable.Range(1, 43), pizzas.Select(m => m.MenuNumber!.Value));
+        Assert.All(pizzas, item =>
+        {
+            Assert.Equal(item.MenuNumber <= 12 ? 85m : item.MenuNumber == 36 ? 100m : 90m, item.Price);
+            Assert.False(string.IsNullOrWhiteSpace(item.Description));
+        });
+        Assert.Equal("Margherita", menu[0].Name);
+        Assert.Equal("Flygande Tefat", menu[35].Name);
+        Assert.Contains("Dubbel inbakad", menu[35].Description);
+        Assert.Equal(new[] { "Pizzor", "Sallader", "Kebab", "Stekrätter" }, menu.Select(m => m.Category).Distinct());
+        Assert.Equal(8, menu.Count(m => m.Category == "Sallader"));
+        Assert.Equal(9, menu.Count(m => m.Category == "Kebab"));
+        Assert.All(menu.Where(m => m.Category is "Sallader" or "Kebab"), item =>
+        {
+            Assert.Equal(90m, item.Price);
+            Assert.Null(item.MenuNumber);
+            Assert.False(string.IsNullOrWhiteSpace(item.Description));
+        });
+        var burger = Assert.Single(menu, m => m.Category == "Stekrätter");
+        Assert.Equal("Hamburgare 90gr", burger.Name);
+        Assert.Equal(80m, burger.Price);
+        var burgerOrder = Pizza(); burgerOrder.MenuItemId = burger.Id;
+        var response = await client.PostAsJsonAsync("/api/restaurants/1/orders", burgerOrder);
+        response.EnsureSuccessStatusCode();
+        Assert.Equal(80m, (await response.Content.ReadFromJsonAsync<OrderDetails>())!.UnitPrice);
+        var alaCarte = await client.GetFromJsonAsync<List<PizzaApp.Models.MenuItem>>("/api/restaurants/2/menu");
+        Assert.Equal(new[] { 5, 6, 7, 8 }, alaCarte!.Select(m => m.Id));
         (await client.PostAsJsonAsync("/api/restaurants/1/orders", Pizza())).EnsureSuccessStatusCode();
         Assert.Empty((await client.GetFromJsonAsync<DailyOrderList>("/api/restaurants/2/orders"))!.Orders);
     }
@@ -100,7 +128,7 @@ public class OrdersApiTests
         Assert.DoesNotContain("DELETE FROM \"Orders\"", sql);
     }
 
-    private static OrderInput Pizza() => new() { MenuItemId = 2, Sauce = "Ingen sås", Drink = "Vatten" };
+    private static OrderInput Pizza() => new() { MenuItemId = 2, Sauce = "Ingen sås", Drink = "Coca-Cola 33cl" };
 
     [Fact]
     public async Task Client_can_assign_collector_and_complete_day_without_duplicate_history()
@@ -206,7 +234,7 @@ public class OrdersApiTests
     {
         using var app = new TestApp(); using var client = app.CreateClient();
         client.DefaultRequestHeaders.Authorization = new("Bearer", "member");
-        var forged = new { MenuItemId = 2, Sauce = "Ingen sås", Drink = "Vatten", Quantity = 1, Name = "Anna",
+        var forged = new { MenuItemId = 2, Sauce = "Ingen sås", Drink = "Coca-Cola 33cl", Quantity = 1, Name = "Anna",
             OwnerUserId = Guid.NewGuid(), IsAdmin = true };
         var created = await client.PostAsJsonAsync("/api/restaurants/1/orders", forged);
         created.EnsureSuccessStatusCode();

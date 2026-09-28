@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PizzaApp.Api.Data;
@@ -11,9 +12,11 @@ using PizzaApp.Api.Data;
 namespace PizzaApp.Api.Migrations
 {
     [DbContext(typeof(PizzaDbContext))]
-    partial class PizzaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260928192608_FullPizzeriaMenu")]
+    partial class FullPizzeriaMenu
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -61,10 +64,6 @@ namespace PizzaApp.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
@@ -92,7 +91,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 1,
-                            Category = "Pizzor",
                             Description = "Tomat, Ost",
                             MenuNumber = 1,
                             Name = "Margherita",
@@ -102,7 +100,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 2,
-                            Category = "Pizzor",
                             Description = "Skinka",
                             MenuNumber = 2,
                             Name = "Vesuvio",
@@ -112,7 +109,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 3,
-                            Category = "Pizzor",
                             Description = "Skinka, Champinjoner",
                             MenuNumber = 3,
                             Name = "Capricciosa",
@@ -122,7 +118,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 4,
-                            Category = "Pizzor",
                             Description = "Skinka, Ananas",
                             MenuNumber = 4,
                             Name = "Hawaii",
@@ -132,7 +127,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 9,
-                            Category = "Pizzor",
                             Description = "Skinka (Inbakad)",
                             MenuNumber = 5,
                             Name = "Calzone",
@@ -142,7 +136,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 10,
-                            Category = "Pizzor",
                             Description = "Tonfisk, Lök",
                             MenuNumber = 6,
                             Name = "Pescatore",
@@ -152,7 +145,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 11,
-                            Category = "Pizzor",
                             Description = "Köttfärs, Vitlökssås",
                             MenuNumber = 7,
                             Name = "Caruso",
@@ -162,7 +154,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 12,
-                            Category = "Pizzor",
                             Description = "Köttfärssås, Lök",
                             MenuNumber = 8,
                             Name = "Bolognese",
@@ -172,7 +163,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 13,
-                            Category = "Pizzor",
                             Description = "Bacon, Lök",
                             MenuNumber = 9,
                             Name = "La Maffia",
@@ -182,7 +172,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 14,
-                            Category = "Pizzor",
                             Description = "Salami",
                             MenuNumber = 10,
                             Name = "Cacciatore",
@@ -192,7 +181,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 15,
-                            Category = "Pizzor",
                             Description = "Skinka, Räkor",
                             MenuNumber = 11,
                             Name = "Tomaso",
@@ -202,7 +190,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 16,
-                            Category = "Pizzor",
                             Description = "Musslor, Räkor",
                             MenuNumber = 12,
                             Name = "Marinara",
@@ -212,7 +199,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 17,
-                            Category = "Pizzor",
                             Description = "Skinka, Banan, Ananas, Curry",
                             MenuNumber = 13,
                             Name = "Africana",
@@ -222,7 +208,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 18,
-                            Category = "Pizzor",
                             Description = "Skinka, Champinjoner, Räkor",
                             MenuNumber = 14,
                             Name = "Jamaica",
@@ -232,7 +217,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 19,
-                            Category = "Pizzor",
                             Description = "Bacon, Champinjoner, Lök, Paprika",
                             MenuNumber = 15,
                             Name = "Mama Mia",
@@ -242,7 +226,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 20,
-                            Category = "Pizzor",
                             Description = "Fläskfilé, Lök, Champinjoner, Bearnaisesås",
                             MenuNumber = 16,
                             Name = "Amore Mio",
@@ -252,7 +235,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 21,
-                            Category = "Pizzor",
                             Description = "Fläskfilé, Lök, Champinjoner, Vitlökssås (Inbakad)",
                             MenuNumber = 17,
                             Name = "Ciao Ciao",
@@ -262,7 +244,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 22,
-                            Category = "Pizzor",
                             Description = "Skinka, Ananas, Räkor",
                             MenuNumber = 18,
                             Name = "Prinsessa",
@@ -272,7 +253,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 23,
-                            Category = "Pizzor",
                             Description = "Skinka, Bacon, Lök, Bearnaisesås",
                             MenuNumber = 19,
                             Name = "Papillon",
@@ -282,7 +262,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 24,
-                            Category = "Pizzor",
                             Description = "Kyckling, Ananas, Jordnötter, Curry",
                             MenuNumber = 20,
                             Name = "Kycklingpizza",
@@ -292,7 +271,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 25,
-                            Category = "Pizzor",
                             Description = "Champinjoner, Ananas, Paprika, Lök, Tomat, Sparris",
                             MenuNumber = 21,
                             Name = "Vegetariana",
@@ -302,7 +280,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 26,
-                            Category = "Pizzor",
                             Description = "Kebabkött, Lök, Kebabsås",
                             MenuNumber = 22,
                             Name = "Kebabpizza",
@@ -312,7 +289,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 27,
-                            Category = "Pizzor",
                             Description = "Champinjoner, Oxfilé, Gorgonzolaost",
                             MenuNumber = 23,
                             Name = "Gorgonzola",
@@ -322,7 +298,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 28,
-                            Category = "Pizzor",
                             Description = "Skinka, Köttfärssås",
                             MenuNumber = 24,
                             Name = "Disco",
@@ -332,7 +307,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 29,
-                            Category = "Pizzor",
                             Description = "Skinka, Kebabkött, Champinjoner, Bearnaisesås",
                             MenuNumber = 25,
                             Name = "Rolandpizza",
@@ -342,7 +316,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 30,
-                            Category = "Pizzor",
                             Description = "Kebabkött, Lök, Paprika, Champinjoner, Kebabsås",
                             MenuNumber = 26,
                             Name = "Alexpizza",
@@ -352,7 +325,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 31,
-                            Category = "Pizzor",
                             Description = "Kebabkött, Lök, Paprika, Stark kebabsås, Vitlökssås",
                             MenuNumber = 27,
                             Name = "Cyckelpizza",
@@ -362,7 +334,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 32,
-                            Category = "Pizzor",
                             Description = "Oxfilé, Champinjoner, Sparris, Bearnaisesås",
                             MenuNumber = 28,
                             Name = "Husets pizza",
@@ -372,7 +343,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 33,
-                            Category = "Pizzor",
                             Description = "Skinka, Musslor, Räkor, Champinjoner",
                             MenuNumber = 29,
                             Name = "Quatro Stagioni",
@@ -382,7 +352,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 34,
-                            Category = "Pizzor",
                             Description = "Köttfärssås, Champinjoner, Lök, Tacosås, Vitlökssås",
                             MenuNumber = 30,
                             Name = "Mexicana",
@@ -392,7 +361,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 35,
-                            Category = "Pizzor",
                             Description = "Skinka, Tacosås, Jalapeno, Lök, Vitlökssås",
                             MenuNumber = 31,
                             Name = "Azteka",
@@ -402,7 +370,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 36,
-                            Category = "Pizzor",
                             Description = "Oxfilé, Champinjoner, Lök, Jalapeno, Tacosås, Vitlökssås",
                             MenuNumber = 32,
                             Name = "Acapulko",
@@ -412,7 +379,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 37,
-                            Category = "Pizzor",
                             Description = "Kebabkött, Gurka, Tomat, Isbergssallad, Kebabsås, Lök",
                             MenuNumber = 33,
                             Name = "Kebabspecial",
@@ -422,7 +388,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 38,
-                            Category = "Pizzor",
                             Description = "Kebabkött, Skinka, Pommes, Kebabsås",
                             MenuNumber = 34,
                             Name = "Vara Special",
@@ -432,7 +397,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 39,
-                            Category = "Pizzor",
                             Description = "Kebabkött, Skinka, Ananas, Kebabsås",
                             MenuNumber = 35,
                             Name = "Tre Kronor",
@@ -442,7 +406,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 40,
-                            Category = "Pizzor",
                             Description = "Fläskfilé, Champinjoner, Paprika, Lök, Bearnaisesås (Dubbel inbakad)",
                             MenuNumber = 36,
                             Name = "Flygande Tefat",
@@ -452,7 +415,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 41,
-                            Category = "Pizzor",
                             Description = "Fläskfilé, Champinjoner, Paprika, Lök, Bearnaisesås (Halvt inbakad)",
                             MenuNumber = 37,
                             Name = "U-båt 1",
@@ -462,7 +424,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 42,
-                            Category = "Pizzor",
                             Description = "Skinka, Kebabkött, Champinjoner, Kebabsås (Halvt inbakad)",
                             MenuNumber = 38,
                             Name = "U-båt 2",
@@ -472,7 +433,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 43,
-                            Category = "Pizzor",
                             Description = "Kyckling, Räkor, Champinjoner, Lök, Paprika, Kebabsås",
                             MenuNumber = 39,
                             Name = "Kycklinggryta",
@@ -482,7 +442,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 44,
-                            Category = "Pizzor",
                             Description = "Kebabkött, Skinka, Räkor, Ananas, Champinjoner, Kebabsås",
                             MenuNumber = 40,
                             Name = "Frank Special",
@@ -492,7 +451,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 45,
-                            Category = "Pizzor",
                             Description = "Skinka, Kebabkött, Bacon, Champinjoner, Kebabsås",
                             MenuNumber = 41,
                             Name = "Kvänums Special",
@@ -502,7 +460,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 46,
-                            Category = "Pizzor",
                             Description = "Skinka, Lök, Paprika, Champinjoner, Kebabkött, Kebabsås",
                             MenuNumber = 42,
                             Name = "Anderspizza",
@@ -512,7 +469,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 47,
-                            Category = "Pizzor",
                             Description = "Skinka, Champinjoner, Köttfärs, Pommes, Kebabsås",
                             MenuNumber = 43,
                             Name = "Curuso Special",
@@ -521,170 +477,7 @@ namespace PizzaApp.Api.Migrations
                         },
                         new
                         {
-                            Id = 48,
-                            Category = "Sallader",
-                            Description = "Skinka, Räkor, Ananas, Ost, Sallad, Gurka, Majs",
-                            Name = "Amerikansk Sallad",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 49,
-                            Category = "Sallader",
-                            Description = "Räkor, Ost, Ägg, Citron, Tomat, Sallad, Gurka, Majs",
-                            Name = "Räksallad",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 50,
-                            Category = "Sallader",
-                            Description = "Räkor, Musslor, Champinjoner, Majs, Citron, Tomat, Sallad, Gurka",
-                            Name = "Västkustsallad",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 51,
-                            Category = "Sallader",
-                            Description = "Kyckling, Ananas, Majs, Tomat, Sallad, Gurka",
-                            Name = "Kycklingsallad",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 52,
-                            Category = "Sallader",
-                            Description = "Tonfisk, Ost, Lök, Majs, Champinjoner, Tomat, Sallad, Gurka",
-                            Name = "Tonfisksallad",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 53,
-                            Category = "Sallader",
-                            Description = "Kebab, Lök, Majs, Champinjoner, Tomat, Sallad, Gurka",
-                            Name = "Kebabsallad",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 54,
-                            Category = "Sallader",
-                            Description = "Nötfärs, Majs, Lök, Ost, Ananas, Tomat, Gurka, Sallad, Tacosås",
-                            Name = "Tacosallad",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 55,
-                            Category = "Sallader",
-                            Description = "Sallad, Gurka, Ananas, Champinjoner, Paprika, Majs, Sparris",
-                            Name = "Vegetarisk Sallad",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 56,
-                            Category = "Kebab",
-                            Description = "Kebab eller kyckling, Sallad, Tomat, Gurka, Lök, Kebabsås",
-                            Name = "Kebab m. Bröd",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 57,
-                            Category = "Kebab",
-                            Description = "Pommes, Sallad, Gurka, Tomat, Lök, Kebabsås",
-                            Name = "Kebab/Kyckling-Tallrik",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 58,
-                            Category = "Kebab",
-                            Description = "Kebab eller kyckling, Sallad, Tomat, Gurka, Lök, Kebabsås",
-                            Name = "Kebab/Kyckling-Rulle",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 59,
-                            Category = "Kebab",
-                            Description = "Räkor, Sallad, Gurka, Tomat, Skinka, Ananas, Kebabsås",
-                            Name = "Räkrulle",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 60,
-                            Category = "Kebab",
-                            Description = "Skinka, Sallad, Gurka, Tomat, Ananas, Kebabsås",
-                            Name = "Hawaiirulle",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 61,
-                            Category = "Kebab",
-                            Description = "Nötfärs, Majs, Lök, Gurka, Tomat, Sallad, Tacosås, Jalapeno",
-                            Name = "Tacorulle",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 62,
-                            Category = "Kebab",
-                            Description = "Med potatismos, Kebabsås",
-                            Name = "Kebabtallrik",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 63,
-                            Category = "Kebab",
-                            Description = "Kebab, Pommes, Kebabsås",
-                            Name = "Kebabrulle",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 64,
-                            Category = "Kebab",
-                            Description = "Kyckling, Pommes, Kebabsås",
-                            Name = "Kycklingrulle",
-                            Price = 90m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
-                            Id = 65,
-                            Category = "Stekrätter",
-                            Description = "Med bröd & Pommes",
-                            Name = "Hamburgare 90gr",
-                            Price = 80m,
-                            RestaurantId = 1
-                        },
-                        new
-                        {
                             Id = 5,
-                            Category = "",
                             Description = "",
                             Name = "Oxfilé med potatis",
                             Price = 189m,
@@ -693,7 +486,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 6,
-                            Category = "",
                             Description = "",
                             Name = "Kycklingfilé",
                             Price = 159m,
@@ -702,7 +494,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 7,
-                            Category = "",
                             Description = "",
                             Name = "Pasta Carbonara",
                             Price = 149m,
@@ -711,7 +502,6 @@ namespace PizzaApp.Api.Migrations
                         new
                         {
                             Id = 8,
-                            Category = "",
                             Description = "",
                             Name = "Caesarsallad",
                             Price = 139m,

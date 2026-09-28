@@ -52,7 +52,7 @@ else if (restaurant != null)
         <div><p class="eyebrow">@restaurant.Name</p><h1>@(restaurant.IsPizzeria ? "Pizzerian" : "Sperring")</h1></div>
         @if (daily != null)
         {
-            <a class="list-link" href="#daily-list">Dagens lista <span>@(daily.CollectedAt == null ? daily.Orders.Sum(o => o.Quantity) : 0)</span></a>
+            <button type="button" class="list-link" @onclick="ShowDailyList">Dagens lista <span>@(daily.CollectedAt == null ? daily.Orders.Sum(o => o.Quantity) : 0)</span></button>
         }
     </div>
     @if (loading)
@@ -72,21 +72,57 @@ else if (restaurant != null)
         <div class="order-grid">
             <section class="panel menu-panel" aria-labelledby="menu-heading">
                 <p class="eyebrow">VÄLJ DIN FAVORIT</p>
-                <h2 id="menu-heading">@(restaurant.IsPizzeria ? "Pizzor" : "À la carte")</h2>
+                <h2 id="menu-heading">@(restaurant.IsPizzeria ? "Meny" : "À la carte")</h2>
                 @if (menu.Count == 0) { <p>Menyn är inte upplagd ännu.</p> }
-                <div class="menu-list">
-                    @foreach (var item in menu)
-                    {
-                        <button class="menu-item @(input?.MenuItemId == item.Id ? "selected" : "")" data-menu-item="@item.Id"
-                                disabled="@(busy || daily.IsLocked)" @onclick="() => SelectItem(item)">
-                            <span class="menu-number" aria-hidden="true">@(menu.IndexOf(item) + 1)</span>
-                            <span><strong>@item.Name</strong><small>@item.Price.ToString("0.##") kr</small></span>
-                            <span class="add-icon" aria-hidden="true">+</span>
-                        </button>
-                    }
+                @if (restaurant.IsPizzeria)
+                {
+                    <div class="menu-tabs" role="tablist" aria-label="Menysektioner">
+                        @foreach (var tab in menu.Select(MenuTab).Distinct())
+                        {
+                            <button type="button" role="tab" id="@TabId(tab)" aria-controls="menu-tab-panel"
+                                    aria-selected="@(ActiveTab == tab ? "true" : "false")"
+                                    class="@(ActiveTab == tab ? "active" : "")" @onclick="() => activeTab = tab">@tab</button>
+                        }
+                    </div>
+                }
+                <div id="menu-tab-panel" role="@(restaurant.IsPizzeria ? "tabpanel" : null)"
+                     aria-labelledby="@(restaurant.IsPizzeria ? TabId(ActiveTab) : null)">
+                @foreach (var group in menu.Where(item => !restaurant.IsPizzeria || MenuTab(item) == ActiveTab)
+                    .GroupBy(item => string.IsNullOrWhiteSpace(item.Category)
+                        ? (restaurant.IsPizzeria ? "Pizzor" : "À la carte") : item.Category))
+                {
+                    <section class="menu-category" aria-label="@group.Key">
+                        @if (restaurant.IsPizzeria) { <h3>@group.Key</h3> }
+                        @if (restaurant.IsPizzeria && group.Key == "Pizzor")
+                        {
+                            <p>Tomat och ost ingår i alla pizzor.</p>
+                        }
+                        <div class="menu-list">
+                            @foreach (var item in group)
+                            {
+                                <button class="menu-item @(input?.MenuItemId == item.Id ? "selected" : "")" data-menu-item="@item.Id"
+                                        disabled="@(busy || daily.IsLocked)" @onclick="() => SelectItem(item)">
+                                    @if (item.MenuNumber.HasValue)
+                                    {
+                                        <span class="menu-number" aria-hidden="true">@item.MenuNumber</span>
+                                    }
+                                    <span>
+                                        <strong>@item.Name</strong>
+                                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                                        {
+                                            <small>@item.Description</small>
+                                        }
+                                        <small>@item.Price.ToString("0.##") kr</small>
+                                    </span>
+                                    <span class="add-icon" aria-hidden="true">+</span>
+                                </button>
+                            }
+                        </div>
+                    </section>
+                }
                 </div>
             </section>
-            <section class="panel selection-panel" aria-labelledby="selection-heading">
+            <section id="selection-panel" tabindex="-1" class="panel selection-panel" aria-labelledby="selection-heading">
                 @if (input == null)
                 {
                     <div class="empty-selection"><span aria-hidden="true">＋</span><h2 id="selection-heading">Gör ditt val</h2><p>Välj en rätt från menyn för att lägga till den i dagens lista.</p></div>
@@ -278,6 +314,20 @@ else if (restaurant != null)
     private string? error;
     private string? success;
     private string lastRefreshed = "";
+    private string? activeTab;
+    private bool focusSelection;
+    private static string MenuTab(MenuItem item) => item.Category is "" or "Pizzor"
+        ? item.MenuNumber switch { <= 12 => "Pizzor 1–12", <= 24 => "Pizzor 13–24", <= 33 => "Pizzor 25–33", _ => "Pizzor 34–43" }
+        : item.Category;
+    private string ActiveTab => activeTab ?? menu.Select(MenuTab).FirstOrDefault() ?? "";
+    private static string TabId(string tab) => "tab-" + tab.Replace(' ', '-');
+    private async Task ShowDailyList() => await JS.InvokeVoidAsync("pizzaPage.center", "daily-list");
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!focusSelection) return;
+        focusSelection = false;
+        await JS.InvokeVoidAsync("pizzaPage.center", "selection-panel");
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -315,7 +365,7 @@ else if (restaurant != null)
     private async Task SelectRestaurant(Restaurant selected)
     {
         var version = loadVersion;
-        restaurant = selected; daily = null; menu = []; input = null; editingId = deleteId = null;
+        activeTab = null; focusSelection = false; restaurant = selected; daily = null; menu = []; input = null; editingId = deleteId = null;
         loading = true; error = success = null;
         try
         {
@@ -378,10 +428,13 @@ else if (restaurant != null)
         if (busy || daily?.IsLocked != false) return;
         if (input == null) input = new() { Name = Auth.User?.DisplayName ?? "" };
         input.MenuItemId = item.Id;
+        input.Sauce = restaurant?.IsPizzeria == true ? MenuSauce.DefaultFor(item.Description) : null;
+        focusSelection = true;
         error = success = null;
     }
     private void Edit(OrderDetails order)
     {
+        focusSelection = true;
         editingId = order.Id; error = success = null;
         input = new() { MenuItemId = order.MenuItemId, Quantity = order.Quantity, Name = order.Name,
             Sauce = order.Sauce, Drink = order.Drink, Comment = order.Comment, Revision = order.Revision };

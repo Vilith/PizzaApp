@@ -4,8 +4,26 @@ namespace PizzaApp.Shared;
 
 public static class PizzaChoices
 {
-    public static readonly string[] Sauces = ["Vitlökssås", "Bearnaisesås", "Chilisås", "Ingen sås"];
-    public static readonly string[] Drinks = ["Coca-Cola 33 cl", "Coca-Cola Zero 33 cl", "Fanta 33 cl", "Sprite 33 cl", "Vatten"];
+    public static readonly string[] Sauces = ["Ingen sås", "Vitlökssås", "Bearnaisesås", "Kebabsås", "Kebabsås (Mixad)", "Kebabsås (Stark)"];
+    public static readonly string[] Drinks = ["Coca-Cola 33cl", "Fanta 33cl", "Sprite 33cl", "Pepsi Max 33cl"];
+}
+
+public static class MenuSauce
+{
+    public static string DefaultFor(string description)
+    {
+        foreach (var ingredient in description.Split(','))
+        {
+            var text = ingredient.Trim();
+            if (text.StartsWith("Stark kebabsås", StringComparison.OrdinalIgnoreCase))
+                return "Kebabsås (Stark)";
+            foreach (var sauce in PizzaChoices.Sauces.Where(s => s != "Ingen sås").OrderByDescending(s => s.Length))
+                if (text.Equals(sauce, StringComparison.OrdinalIgnoreCase) ||
+                    text.StartsWith(sauce + " (", StringComparison.OrdinalIgnoreCase))
+                    return sauce;
+        }
+        return "Ingen sås";
+    }
 }
 
 public class OrderInput

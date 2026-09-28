@@ -13,6 +13,7 @@ public class HomeTests : TestContext
     private readonly FakeAuth auth = new();
     public HomeTests()
     {
+        JSInterop.SetupVoid("pizzaPage.center", _ => true).SetVoidResult();
         JSInterop.SetupVoid("pizzaEntrance.play").SetVoidResult();
         JSInterop.SetupVoid("pizzaEntrance.play", "Pizza").SetVoidResult();
         JSInterop.SetupVoid("pizzaEntrance.play", "Sperring").SetVoidResult();
@@ -87,7 +88,7 @@ public class HomeTests : TestContext
         page.Find("[data-restaurant='1']").Click();
         page.Find("[data-menu-item='2']").Click();
         page.Find("#sauce").Change("Ingen sås");
-        page.Find("#drink").Change("Vatten");
+        page.Find("#drink").Change("Coca-Cola 33cl");
         page.Find("#quantity").Change("3");
         page.Find("form").Submit();
         page.WaitForAssertion(() => Assert.NotNull(orders.Saved));
@@ -132,7 +133,7 @@ public class HomeTests : TestContext
         page.Find("[data-restaurant='1']").Click();
         page.Find("[data-menu-item='2']").Click();
         page.Find("#sauce").Change("Ingen sås");
-        page.Find("#drink").Change("Vatten");
+        page.Find("#drink").Change("Coca-Cola 33cl");
         page.Find("form").Submit();
         page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("[role='alert']")));
         Assert.NotEmpty(page.FindAll("form"));
@@ -180,7 +181,7 @@ public class HomeTests : TestContext
         orders.Existing.Quantity = 3;
         var page = RenderComponent<Home>();
         page.Find("[data-restaurant='1']").Click();
-        Assert.Contains("3 × Vatten", page.Find("[data-list='drinks']").TextContent);
+        Assert.Contains("3 × Coca-Cola 33cl", page.Find("[data-list='drinks']").TextContent);
         Assert.DoesNotContain("Vesuvio", page.Find(".summary-box").TextContent);
         Assert.True(page.Find("[data-action='complete']").HasAttribute("disabled"));
         page.Find("[data-collector='1']").Change(true);
@@ -253,12 +254,58 @@ public class HomeTests : TestContext
         Assert.Equal("/settings", layout.Find("[data-action='settings']").GetAttribute("href"));
     }
 
+    [Fact]
+    public void Pizzeria_groups_menu_and_new_dishes_can_be_selected()
+    {
+        Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/pizzerian");
+        var page = RenderComponent<Home>();
+        Assert.Equal(new[] { "Pizzor 1–12", "Sallader", "Kebab", "Stekrätter" },
+            page.FindAll("[role=tab]").Select(h => h.TextContent));
+        Assert.Contains("Tomat och ost", page.Find(".menu-category").TextContent);
+        Assert.Single(page.FindAll(".menu-number"));
+        page.Find("#tab-Stekrätter").Click();
+        Assert.Empty(page.FindAll("[data-menu-item=2]"));
+        Assert.Contains("Med bröd & Pommes", page.Find("[data-menu-item='65']").TextContent);
+        page.Find("[data-menu-item='65']").Click();
+        Assert.Equal("Hamburgare 90gr", page.Find("#selection-heading").TextContent);
+    }
+
+    [Fact]
+    public void Selection_defaults_sauce_centers_form_and_daily_list_stays_on_page()
+    {
+        var navigation = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+        navigation.NavigateTo("/pizzerian");
+        var page = RenderComponent<Home>();
+        page.Find("[data-menu-item='2']").Click();
+        Assert.Equal("Ingen sås", page.Find("#sauce").GetAttribute("value"));
+        Assert.Equal(PizzaChoices.Drinks, page.FindAll("#drink option").Skip(1).Select(o => o.TextContent));
+        Assert.Contains(JSInterop.Invocations, call => call.Identifier == "pizzaPage.center" && Equals(call.Arguments[0], "selection-panel"));
+        page.Find(".list-link").Click();
+        Assert.EndsWith("/pizzerian", navigation.Uri);
+        Assert.Contains(JSInterop.Invocations, call => call.Identifier == "pizzaPage.center" && Equals(call.Arguments[0], "daily-list"));
+    }
+
+    [Theory]
+    [InlineData("Skinka", "Ingen sås")]
+    [InlineData("Fläskfilé, Bearnaisesås (Inbakad)", "Bearnaisesås")]
+    [InlineData("Köttfärs, Vitlökssås", "Vitlökssås")]
+    [InlineData("Kebabkött, Kebabsås", "Kebabsås")]
+    [InlineData("Kebabkött, Stark kebabsås, Vitlökssås", "Kebabsås (Stark)")]
+    [InlineData("Kebabsås (Mixad)", "Kebabsås (Mixad)")]
+    [InlineData("Tacosås, Vitlökssås", "Vitlökssås")]
+    public void Ingredient_sauce_is_selected(string ingredients, string expected)
+        => Assert.Equal(expected, MenuSauce.DefaultFor(ingredients));
+
     private class FakeRestaurants : IRestaurantApiService
     {
         public Task<List<Restaurant>> GetRestaurantsAsync() => Task.FromResult<List<Restaurant>>([
             new() { Id = 1, Name = "Kvänum Pizzeria", IsPizzeria = true }, new() { Id = 2, Name = "Sperring" }]);
         public Task<List<MenuItem>> GetMenuAsync(int id) => Task.FromResult<List<MenuItem>>(id == 1
-            ? [new() { Id = 2, RestaurantId = 1, Name = "Vesuvio", Price = 95 }]
+            ? [
+                new() { Id = 2, RestaurantId = 1, Name = "Vesuvio", MenuNumber = 2, Category = "Pizzor", Price = 85 },
+                new() { Id = 48, RestaurantId = 1, Name = "Amerikansk Sallad", Category = "Sallader", Description = "Skinka, Räkor", Price = 90 },
+                new() { Id = 56, RestaurantId = 1, Name = "Kebab m. Bröd", Category = "Kebab", Price = 90 },
+                new() { Id = 65, RestaurantId = 1, Name = "Hamburgare 90gr", Category = "Stekrätter", Description = "Med bröd & Pommes", Price = 80 }]
             : [new() { Id = 100, RestaurantId = 2, Name = "Dagens rätt", Price = 100 }]);
     }
 
@@ -275,7 +322,7 @@ public class HomeTests : TestContext
         public int SavedRestaurant;
         public int? UpdatedId;
         public (int, int, Guid)? Deleted;
-        public OrderDetails Existing = new() { Id = 1, RestaurantId = 1, MenuItemId = 2, Pizza = "Vesuvio", Sauce = "Ingen sås", Drink = "Vatten", Revision = Guid.NewGuid() };
+        public OrderDetails Existing = new() { Id = 1, RestaurantId = 1, MenuItemId = 2, Pizza = "Vesuvio", Sauce = "Ingen sås", Drink = "Coca-Cola 33cl", Revision = Guid.NewGuid() };
         public Task<DailyOrderList> GetTodayAsync(int id) => Task.FromResult(new DailyOrderList
         { Date = new(2026, 9, 22), IsPizzeria = id == 1, IsLocked = Locked || Completed,
           CollectedAt = Completed ? DateTime.UtcNow : null, CollectedBy = Completed ? [Existing.Name] : [],

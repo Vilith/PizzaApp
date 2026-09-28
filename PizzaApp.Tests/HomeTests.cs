@@ -11,9 +11,11 @@ public class HomeTests : TestContext
 {
     private readonly FakeOrders orders = new();
     private readonly FakeAuth auth = new();
+    private readonly Bunit.JSRuntimeInvocationHandler scrollHandler;
     public HomeTests()
     {
-        JSInterop.SetupVoid("pizzaPage.center", _ => true).SetVoidResult();
+        scrollHandler = JSInterop.SetupVoid("pizzaPage.center", _ => true);
+        scrollHandler.SetVoidResult();
         JSInterop.SetupVoid("pizzaEntrance.play").SetVoidResult();
         JSInterop.SetupVoid("pizzaEntrance.play", "Pizza").SetVoidResult();
         JSInterop.SetupVoid("pizzaEntrance.play", "Sperring").SetVoidResult();
@@ -294,6 +296,25 @@ public class HomeTests : TestContext
     [InlineData("Tacosås, Vitlökssås", "Vitlökssås")]
     public void Ingredient_sauce_is_selected(string ingredients, string expected)
         => Assert.Equal(expected, MenuSauce.DefaultFor(ingredients));
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Scroll_failure_does_not_prevent_selecting_and_saving(bool timeout)
+    {
+        scrollHandler.SetException<Exception>(timeout
+            ? new TaskCanceledException("Scroll timed out")
+            : new Microsoft.JSInterop.JSException("pizzaPage.center is undefined"));
+        Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/pizzerian");
+        var page = RenderComponent<Home>();
+        page.Find("[data-menu-item='2']").Click();
+        page.WaitForAssertion(() => Assert.Equal("Vesuvio", page.Find("#selection-heading").TextContent));
+        page.Find("#drink").Change("Fanta 33cl");
+        page.Find("form").Submit();
+        page.WaitForAssertion(() => Assert.NotNull(orders.Saved));
+        Assert.Equal(2, orders.Saved!.MenuItemId);
+        Assert.Equal("Ingen sås", orders.Saved.Sauce);
+    }
 
     private class FakeRestaurants : IRestaurantApiService
     {

@@ -3,6 +3,8 @@
 @page "/sperring"
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@using Microsoft.Extensions.Logging
+@inject ILogger<Home> Logger
 @inject IOrderApiService OrderApiService
 @inject IRestaurantApiService RestaurantApiService
 @inject IAuthService Auth
@@ -321,7 +323,16 @@ else if (restaurant != null)
     {
         if (!focusSelection) return;
         focusSelection = false;
-        await JS.InvokeVoidAsync("pizzaPage.center", "selection-panel");
+        try
+        {
+            await JS.InvokeVoidAsync("pizzaPage.center", "selection-panel");
+        }
+        catch (Exception ex) when (ex is JSException or TaskCanceledException)
+        {
+            // Scrolling is optional; a missing script or unsupported browser API
+            // must not prevent the user from selecting and saving their meal.
+            Logger.LogWarning(ex, "Could not scroll to the selected menu item.");
+        }
     }
 
     protected override async Task OnInitializedAsync()

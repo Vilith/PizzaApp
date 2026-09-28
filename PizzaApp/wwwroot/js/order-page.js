@@ -4,11 +4,17 @@ window.pizzaPage = {
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const target = document.getElementById(id);
         if (!target) return;
-        target.focus({ preventScroll: true });
+        try { target.focus({ preventScroll: true }); }
+        catch { target.focus(); }
         const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-        target.scrollIntoView({
-            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-            block: target.getBoundingClientRect().height > viewportHeight - 32 ? 'start' : 'center'
-        });
+        try {
+            target.scrollIntoView({
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                block: target.getBoundingClientRect().height > viewportHeight - 32 ? 'start' : 'center'
+            });
+        } catch {
+            // Older mobile browsers may only support the boolean overload.
+            target.scrollIntoView(true);
+        }
     }
 };

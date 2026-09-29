@@ -61,5 +61,6 @@ public class AuthController(IOptions<SupabaseOptions> options, ICurrentUser user
     }
 
     private SignedInUser Details(UserProfile? profile) => new(user.Id, User.FindFirstValue(ClaimTypes.Email) ?? "",
-        user.IsAdmin, profile?.DisplayName ?? "", profile?.AvatarDataUrl, profile?.Revision ?? Guid.Empty);
+        user.IsAdmin, profile?.DisplayName ?? "", profile?.AvatarDataUrl, profile?.Revision ?? Guid.Empty,
+        User.HasClaim("pizza_password_change_required", "true"));
 }

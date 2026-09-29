@@ -35,6 +35,8 @@ namespace PizzaApp.Api
             });
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+            builder.Services.AddHttpClient("SupabasePasswords", client => client.Timeout = TimeSpan.FromSeconds(15))
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
             builder.Services.AddHttpClient("SupabaseVerification", client => client.Timeout = TimeSpan.FromSeconds(15))
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
             builder.Services.AddAuthentication("Supabase")
@@ -67,6 +69,19 @@ namespace PizzaApp.Api
             app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.Use(async (context, next) =>
+            {
+                var path = context.Request.Path.Value?.TrimEnd('/').ToLowerInvariant();
+                if (context.User.HasClaim("pizza_password_change_required", "true")
+                    && context.Request.Path.StartsWithSegments("/api")
+                    && path is not ("/api/auth/me" or "/api/passwords/change"))
+                {
+                    context.Response.StatusCode = 403;
+                    await context.Response.WriteAsJsonAsync(new { detail = "Byt ditt tillfälliga lösenord under Inställningar innan du fortsätter." });
+                    return;
+                }
+                await next(context);
+            });
 
             app.MapControllers();
             // Unknown API URLs must not return the SPA's HTML document.

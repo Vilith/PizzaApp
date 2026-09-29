@@ -1,5 +1,5 @@
 @inject IAuthService Auth
-@inject IJSRuntime JS
+
 
 @if (registering)
 {
@@ -41,8 +41,6 @@ else
         try
         {
             await Auth.SignInAsync(credentials.Alias, credentials.Password);
-            try { await JS.InvokeVoidAsync("pizzaEntrance.play"); }
-            catch (JSException) { /* An optional animation must not prevent signing in. */ }
         }
         catch (AuthException ex) { error = ex.Message; }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)

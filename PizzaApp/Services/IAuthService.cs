@@ -13,6 +13,9 @@ public interface IAuthService
     Task RegisterAsync(RegistrationInput input);
     Task ActivateRegistrationAsync(RegistrationInput input);
     Task<string?> GetAccessTokenAsync();
+    Task<List<PasswordAccount>> GetPasswordAccountsAsync();
+    Task<TemporaryPassword> ResetPasswordAsync(ResetPasswordInput input);
+    Task ChangePasswordAsync(ChangePasswordInput input);
     void ClearSession();
 }
 

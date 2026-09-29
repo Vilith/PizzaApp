@@ -84,6 +84,12 @@ dotnet publish PizzaApp.Api/PizzaApp.Api.csproj -c Release -o artifacts/publish
 
 Kör `dotnet PizzaApp.Api.dll` från publiceringskatalogen på en server med ASP.NET Core 10. Sätt `ConnectionStrings__DefaultConnection`, `Supabase__Url` och `Supabase__PublishableKey` på servern. Databaslösenord ska aldrig läggas i klientprojektet eller i `wwwroot`. Befintlig Supabase-databas används; webbkonverteringen kräver ingen ny databas eller migration.
 
-Direktlänkar till `/pizzerian`, `/sperring` och `/settings` fungerar också vid omladdning. Inloggningen ligger i webbläsarflikens minne: en omladdning eller ny flik kräver ny inloggning. Varje flik har sin egen session. Dörranimationerna, profilbilder och rollkontroller finns kvar.
+Direktlänkar till `/pizzerian`, `/sperring` och `/settings` fungerar också vid omladdning. Inloggningen ligger i webbläsarflikens minne: en omladdning eller ny flik kräver ny inloggning. Varje flik har sin egen session. Dörranimationen spelas bara vid restaurangval, inte direkt efter inloggning. Profilbilder och rollkontroller finns kvar.
 
 Render: välj Web Service, Docker, Dockerfile i repots rot och port 10000. Dockerfile och .dockerignore finns för att publicera webbapp och API tillsammans. Ange serverns miljövariabler i Render. Containerbygget behöver verifieras där eftersom Docker inte finns i den lokala miljön. HTTPS hanteras av Render. Proxyinställningar för klient-IP behöver verifieras vid driftsättning; utan dem kan inloggningens hastighetsbegränsning delas av flera användare bakom samma proxy. Ingenting publiceras automatiskt av den lokala konverteringen.
+
+## Glömt lösenord utan SMTP
+
+Under Inställningar kan användaren byta sitt lösenord. Administratörer kan välja en kollega och skapa ett slumpat tillfälligt lösenord efter bekräftelse med sitt eget lösenord. Kollegan måste välja ett eget lösenord vid nästa inloggning innan beställningar kan göras. Kontot och historiken behålls.
+
+Servern behöver **Supabase__SecretKey** på Render (**Supabase:SecretKey** i lokala User Secrets). Använd en Supabase secret key och håll den enbart på servern. Ingen ny migration behövs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för konfiguration och arbetsgång.

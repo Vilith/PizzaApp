@@ -185,6 +185,49 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task<List<PasswordAccount>> GetPasswordAccountsAsync()
+    {
+        using var response = await PasswordRequest(HttpMethod.Get, "accounts", null);
+        return await response.Content.ReadFromJsonAsync<List<PasswordAccount>>() ?? [];
+    }
+    public async Task<TemporaryPassword> ResetPasswordAsync(ResetPasswordInput input)
+    {
+        using var response = await PasswordRequest(HttpMethod.Post, "reset", input);
+        return await response.Content.ReadFromJsonAsync<TemporaryPassword>()
+            ?? throw new AuthException("Svaret kunde inte läsas. Gör en ny återställning.");
+    }
+    public async Task ChangePasswordAsync(ChangePasswordInput input)
+    {
+        using var response = await PasswordRequest(HttpMethod.Post, "change", input);
+        ClearSession();
+    }
+    private async Task<HttpResponseMessage> PasswordRequest(HttpMethod method, string path, object? payload)
+    {
+        var access = await GetAccessTokenAsync() ?? throw new AuthException("Logga in igen.");
+        var version = sessionVersion;
+        using var request = new HttpRequestMessage(method, "api/passwords/" + path);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", access);
+        if (payload != null) request.Content = JsonContent.Create(payload);
+        var response = await clients.CreateClient("PublicApi").SendAsync(request);
+        if (version != sessionVersion)
+        {
+            response.Dispose();
+            throw new AuthException("Inloggningen har ändrats. Logga in igen.");
+        }
+        if (response.IsSuccessStatusCode) return response;
+        using (response)
+        {
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            { ClearSession(); throw new AuthException("Logga in igen."); }
+            if (response.StatusCode == HttpStatusCode.Forbidden)
+                throw new AuthException("Du saknar behörighet eller behöver först byta ditt tillfälliga lösenord.");
+            if ((int)response.StatusCode == 429)
+                throw new AuthException("För många försök. Vänta en stund.");
+            var problem = await response.Content.ReadFromJsonAsync<ProfileProblem>();
+            throw new AuthException(problem?.Detail ?? "Åtgärden kunde inte bekräftas. Försök igen.");
+        }
+    }
+
     public void ClearSession()
     {
         Interlocked.Increment(ref sessionVersion);

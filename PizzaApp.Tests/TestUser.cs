@@ -28,6 +28,17 @@ public sealed class FakeAuth : IAuthService
     { if (FailRegistration) throw new AuthException("Registreringen misslyckades."); Registered = true; return Task.CompletedTask; }
     public Task ActivateRegistrationAsync(RegistrationInput input) { Activated = true; return Task.CompletedTask; }
     public Task SignOutAsync() { ClearSession(); return Task.CompletedTask; }
+    public List<PasswordAccount> Accounts = [new(Guid.Parse("22222222-2222-2222-2222-222222222222"), "Kollega", "kollega@example.test")];
+    public ResetPasswordInput? LastReset;
+    public bool PasswordChanged;
+    public Task<List<PasswordAccount>> GetPasswordAccountsAsync() => Task.FromResult(Accounts);
+    public Task<TemporaryPassword> ResetPasswordAsync(ResetPasswordInput input)
+    {
+        LastReset = new() { UserId = input.UserId, AdminPassword = input.AdminPassword };
+        return Task.FromResult(new TemporaryPassword("test-temporary-password"));
+    }
+    public Task ChangePasswordAsync(ChangePasswordInput input)
+    { PasswordChanged = true; ClearSession(); return Task.CompletedTask; }
     public void ClearSession() { User = null; Changed?.Invoke(); }
     public Task<string?> GetAccessTokenAsync() => Task.FromResult<string?>(User == null ? null : "test-token");
 }

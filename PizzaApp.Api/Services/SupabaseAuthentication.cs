@@ -12,6 +12,7 @@ namespace PizzaApp.Api.Services;
 public class SupabaseOptions
 {
     public string Url { get; set; } = "";
+    public string SecretKey { get; set; } = "";
     public string PublishableKey { get; set; } = "";
     public bool IsConfigured => Uri.TryCreate(Url, UriKind.Absolute, out var uri)
         && uri.Scheme == "https" && string.IsNullOrEmpty(uri.UserInfo)
@@ -58,11 +59,14 @@ public sealed class SupabaseAuthenticationHandler(
             else if (await db.UserProfiles.AsNoTracking().AnyAsync(p => p.UserId == userId && p.IsRegisteredMember, Context.RequestAborted))
                 assignedRole = "member";
             if (assignedRole == null) return AuthenticateResult.Fail("Kontot har inte tillgång till PizzaApp.");
+            var changeRequired = user.TryGetProperty("app_metadata", out var appMetadata)
+                && appMetadata.TryGetProperty("pizza_password_change_required", out var flag) && flag.ValueKind == JsonValueKind.True;
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(ClaimTypes.Email, user.TryGetProperty("email", out var email) ? email.GetString() ?? "" : ""),
-                new Claim(ClaimTypes.Role, assignedRole)
+                new Claim(ClaimTypes.Role, assignedRole),
+                new Claim("pizza_password_change_required", changeRequired ? "true" : "false")
             };
             return AuthenticateResult.Success(new AuthenticationTicket(
                 new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name)), Scheme.Name));

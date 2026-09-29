@@ -13,11 +13,11 @@ I projektets **Authentication → Sign In / Providers**:
 
 Ingen SMTP-tjänst eller mejlmall behövs för registreringen. API:t kontrollerar att `mailer_autoconfirm` är `true` innan kontot skapas. Om Confirm email fortfarande är på visas ett inställningsfel innan signup, så appen inte börjar skicka mejl av misstag.
 
-Supabase markerar nya adresser som automatiskt bekräftade när Confirm email är avstängt. Det är inte ett bevis på att användaren äger adressen. API:t verifierar fortfarande sessionen hos Supabase, kontots UUID, medlemskap och roll. Glömda lösenord hanteras manuellt av administratören via Supabase; appen har ingen lösenordsåterställning via mejl.
+Supabase markerar nya adresser som automatiskt bekräftade när Confirm email är avstängt. Det är inte ett bevis på att användaren äger adressen. API:t verifierar fortfarande sessionen hos Supabase, kontots UUID, medlemskap och roll. Glömda lösenord hanteras under Inställningar av administratören med ett tillfälligt lösenord. Appen har ingen lösenordsåterställning via mejl; SMTP behövs inte.
 
 Äldre konton som redan väntar på bekräftelse kan behöva aktiveras separat av administratören i Supabase. Att ändra inställningen ska inte betraktas som att gamla konton automatiskt blivit klara. Radera inte profiler eller order för att lösa detta.
 
-Hämta projektets HTTPS-URL och **publishable key** (`sb_publishable_...`) under Settings → API Keys. Ingen secret/service-role-nyckel behövs i appen eller API:t.
+Hämta projektets HTTPS-URL och **publishable key** (`sb_publishable_...`) under Settings → API Keys. För lösenordshantering behövs dessutom en hemlig nyckel endast i API:t, enligt avsnittet nedan. Den får aldrig skickas till klienten.
 
 Se [Supabases registreringsinställningar](https://supabase.com/docs/guides/auth/general-configuration).
 ## Serverkonfiguration
@@ -123,3 +123,18 @@ GROUP BY upper(btrim("DisplayName")) HAVING count(*) > 1;
 Om dubbletter finns avbryts migrationen utan att byta namn på någon. Kom överens om unika nick och uppdatera respektive profils `DisplayName` innan migrationen körs igen. Historiska order behöver inte ändras. Om auth-tabellen ligger i en annan databas, eller e-postadressen senare ändras i Supabase, kan kontot återkopplas med **Slutför befintligt konto**. Den vägen kräver en verifierad Supabase-session med rätt lösenord och behåller befintligt alias och roll.
 
 Alias reserveras när profilen sparas. Om två personer registrerar samma alias samtidigt kan endast en lyckas; den andra väljer ett annat nick via Slutför befintligt konto.
+
+## Lösenordsbyte och administratörsåterställning utan mejl
+
+1. Hämta eller skapa en separat **secret key** (sb_secret_...) i Supabase, **Settings → API Keys**, för PizzaApp-servern.
+2. I Render, öppna API-tjänstens **Environment** och lägg till **Supabase__SecretKey** med nyckeln som värde. Behåll befintlig Supabase__PublishableKey. Spara och publicera/starta om tjänsten.
+3. För lokal utveckling: sätt **Supabase:SecretKey** i API-projektets User Secrets via Visual Studios **Manage User Secrets**. Lägg inte nyckeln i källkod, klientkonfiguration eller Git. Äldre service_role-nyckel stöds också.
+4. Publicera koden. Ingen ny databasmigration eller SMTP krävs för lösenordsfunktionen. Låt Confirm email vara avstängt.
+
+Administratör: gå till **Inställningar → Återställ kollegas lösenord → Hämta användare**. Välj kollega och ange ditt eget nuvarande lösenord. **Skapa tillfälligt lösenord** ersätter kollegans gamla lösenord och visar ett slumpat lösenord. Lämna det privat till rätt person och dölj det sedan. Det kan inte hämtas igen; vid tappat svar görs en ny återställning. Återställning av det egna kontot via denna ruta tillåts inte.
+
+Kollegan loggar in med sitt vanliga nick och det tillfälliga lösenordet. Appen visar lösenordsbyte direkt och servern blockerar övriga API-åtgärder tills ett eget lösenord har valts. Ange det tillfälliga lösenordet som nuvarande lösenord och skriv det nya två gånger. Efter lyckat byte loggas användaren ut ur fliken och kan logga in med det nya lösenordet. Vanligt lösenordsbyte finns också under Inställningar.
+
+Kravet på byte sparas i Supabase app_metadata.pizza_password_change_required tillsammans med lösenordsuppdateringen; inga lösenord lagras i apptabellerna. Supabase verifierar aktuellt lösenord före både eget byte och administratörsåterställning. Endast backend använder den hemliga nyckeln. Konton, roller, profiler och beställningar behålls. Funktionen utlovar inte omedelbar återkallelse av alla tidigare Supabase-sessioner.
+
+Testerna simulerar Supabase och verifierar behörigheter, lösenordskontroll, obligatoriskt byte, felhantering och formulär. Verifiera även mot det konfigurerade Supabase-projektet med ett testkonto efter publicering.

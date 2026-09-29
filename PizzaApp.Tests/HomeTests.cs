@@ -33,6 +33,7 @@ public class HomeTests : TestContext
         Assert.Contains("Sperring", page.Find("[data-restaurant='2']").TextContent);
         Assert.Empty(page.FindAll("#daily-list, .menu-list"));
         page.Find("[data-restaurant='1']").Click();
+        Assert.Contains(JSInterop.Invocations, call => call.Identifier == "pizzaEntrance.play" && Equals(call.Arguments[0], "Pizza"));
         Assert.EndsWith("/pizzerian", Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri);
         page.Find("[data-action='restaurants']").Click();
         Assert.Equal(2, page.FindAll(".restaurant-card").Count);

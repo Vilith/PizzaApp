@@ -14,7 +14,7 @@
 {
     <Login />
 }
-else if (string.IsNullOrWhiteSpace(Auth.User.DisplayName))
+else if (Auth.User.MustChangePassword || string.IsNullOrWhiteSpace(Auth.User.DisplayName))
 {
     <ProfileSettings />
 }
@@ -273,7 +273,7 @@ else if (restaurant != null)
         if (CurrentSection is not ("" or "pizzerian" or "sperring")) return;
         restaurant = null; daily = null; input = null; menu = [];
         editingId = deleteId = null; error = success = null;
-        if (!string.IsNullOrWhiteSpace(Auth.User?.DisplayName)) await LoadRestaurants();
+        if (Auth.User is { MustChangePassword: false } && !string.IsNullOrWhiteSpace(Auth.User.DisplayName)) await LoadRestaurants();
         StateHasChanged();
     });
     private Guid? loadedUser;
@@ -290,7 +290,7 @@ else if (restaurant != null)
             editingId = deleteId = null; error = success = null;
             loading = false;
         }
-        if (Auth.User is { DisplayName.Length: > 0 } && restaurants.Count == 0 && !loading) await LoadRestaurants();
+        if (Auth.User is { DisplayName.Length: > 0, MustChangePassword: false } && restaurants.Count == 0 && !loading) await LoadRestaurants();
         StateHasChanged();
     });
 
@@ -340,7 +340,7 @@ else if (restaurant != null)
         Auth.Changed += AuthChanged;
         Navigation.LocationChanged += LocationChanged;
         loadedUser = Auth.User?.Id;
-        if (!string.IsNullOrWhiteSpace(Auth.User?.DisplayName)) await LoadRestaurants();
+        if (Auth.User is { MustChangePassword: false } && !string.IsNullOrWhiteSpace(Auth.User.DisplayName)) await LoadRestaurants();
         else loading = false;
     }
 

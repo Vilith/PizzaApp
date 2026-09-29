@@ -10,12 +10,14 @@ else
 {
     <section class="profile-panel" aria-labelledby="profile-heading">
         <div class="profile-toolbar">
-            @if (!string.IsNullOrWhiteSpace(Auth.User.DisplayName)) { <a href="/">← Till beställningarna</a> }
+            @if (!Auth.User.MustChangePassword && !string.IsNullOrWhiteSpace(Auth.User.DisplayName)) { <a href="/">← Till beställningarna</a> }
         </div>
         <p class="eyebrow">MIN PROFIL</p>
-        <h1 id="profile-heading">@(string.IsNullOrWhiteSpace(Auth.User.DisplayName) ? "Välj ditt namn eller nick" : "Inställningar")</h1>
-        <p>Ditt unika nick/alias används när du loggar in och beställer. Byter du nick här använder du det nya vid nästa inloggning.</p>
+        <h1 id="profile-heading">@(Auth.User.MustChangePassword ? "Välj ett eget lösenord" : string.IsNullOrWhiteSpace(Auth.User.DisplayName) ? "Välj ditt namn eller nick" : "Inställningar")</h1>
+        @if (!Auth.User.MustChangePassword) { <p>Ditt unika nick/alias används när du loggar in och beställer. Byter du nick här använder du det nya vid nästa inloggning.</p> }
         <p class="account-email">@Auth.User.Email</p>
+        @if (!Auth.User.MustChangePassword)
+        {
         <EditForm Model="input" OnValidSubmit="Save" @key="input">
             <DataAnnotationsValidator />
             <ValidationSummary />
@@ -41,6 +43,8 @@ else
                 </div>
             </fieldset>
         </EditForm>
+        }
+        <PasswordSettings />
         @if (success != null) { <p class="alert alert-success mt-3" role="status">@success</p> }
         @if (error != null) { <p class="alert alert-danger mt-3" role="alert">@error</p> }
     </section>

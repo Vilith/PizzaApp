@@ -1,0 +1,79 @@
+@inject NavigationManager Navigation
+
+<section class="build-site @(paused ? "paused" : "")" aria-labelledby="build-title">
+    <div class="site-topline">
+        <span class="site-brand">SPERRING<span>BYGGPLATS / NR. 001</span></span>
+        <span class="site-status"><i aria-hidden="true"></i> Arbete pågår</span>
+    </div>
+    <div class="build-hero">
+        <div class="build-copy">
+            <p class="build-kicker">NY MENY. NY SIDA. SAMMA HUNGER.</p>
+            <h1 id="build-title">Vi bygger.<br />Du blir <em>hungrig.</em></h1>
+            <p class="build-description">Här bygger vi Sperrings nya beställningssida. <strong>Pizzerian är öppen som vanligt.</strong></p>
+            <p class="build-note">Beställning här är pausad medan vi skruvar ihop det sista. Vårt kattlag jobbar på det. Mellan tupplurarna.</p>
+            <button type="button" class="back-to-doors" data-action="restaurants" @onclick='() => Navigation.NavigateTo("/")'>
+                <span aria-hidden="true">←</span> Tillbaka till restaurangvalet
+            </button>
+            <span class="open-note"><i aria-hidden="true"></i> Pizzasugen? Välj pizzadörren där.</span>
+        </div>
+        <div class="build-scene" aria-hidden="true">
+            <div class="scene-grid"></div>
+            <span class="scene-label">AVDELNINGEN FÖR MJUKA LANDNINGAR</span>
+            <div class="cloud cloud-one"></div><div class="cloud cloud-two"></div>
+            <div class="crane">
+                <div class="crane-tower"></div><div class="crane-arm"></div><div class="crane-rope"></div>
+                <div class="hanging-sign">SNART<br /><strong>SERVERAT</strong></div>
+            </div>
+            <div class="scaffold"><div></div><div></div><div></div></div>
+            <div class="roof"><span>SPERRING</span></div>
+            <div class="falling-cat cat-one">
+                <div class="cat-body"></div><div class="cat-tail"></div>
+                <div class="cat-head"><b class="ear left"></b><b class="ear right"></b><i class="eye left"></i><i class="eye right"></i><span class="cat-nose">▾</span><div class="helmet"></div></div>
+                <span class="cat-paw left"></span><span class="cat-paw right"></span>
+            </div>
+            <div class="falling-cat cat-two">
+                <div class="cat-body"></div><div class="cat-tail"></div>
+                <div class="cat-head"><b class="ear left"></b><b class="ear right"></b><i class="eye left"></i><i class="eye right"></i><span class="cat-nose">▾</span><div class="helmet"></div></div>
+                <span class="cat-paw left"></span><span class="cat-paw right"></span>
+            </div>
+            <div class="cushion cushion-back"></div><div class="cushion cushion-front"></div><div class="cushion cushion-top"></div>
+            <span class="landing-note">100% mjuklandning.<br />0% kattastrof.</span>
+            <div class="barrier"><div class="beacon"><i></i></div><span></span><b></b><b></b></div>
+            <div class="cone cone-one"></div><div class="cone cone-two"></div>
+            <div class="ground"></div>
+        </div>
+    </div>
+    <div class="hazard-tape" aria-hidden="true"></div>
+    <div class="site-bottom">
+        <div class="foreman">
+            <span class="foreman-icon" aria-hidden="true">👷</span>
+            <div><span class="small-heading">ARBETSLEDARENS HUMORHÖRNA</span>
+                <p class="dad-joke" aria-live="polite">@jokes[jokeIndex]</p>
+                <button type="button" class="joke-button" @onclick="NextJoke">Ett till. Jag tål det. <span aria-hidden="true">↻</span></button>
+            </div>
+        </div>
+        <div class="site-controls">
+            <span class="crew-note">Skyddshjälm på. Stressnivå av.</span>
+            <button type="button" class="motion-button" aria-pressed="@(paused ? "true" : "false")" @onclick="() => paused = !paused">
+                @(paused ? "Starta bygget igen" : "Pausa animationerna")
+            </button>
+            <span class="motion-note">Vi följer också din inställning för minskad rörelse.</span>
+        </div>
+    </div>
+</section>
+
+@code {
+    private bool paused;
+    private int jokeIndex;
+    private static readonly string[] jokes =
+    [
+        "Varför fick katten jobbet? Den hade rätt katt-ifikationer.",
+        "Vi skulle dra ett byggskämt. Men det är inte färdigbyggt.",
+        "Snickaren beställde en hamburgare. Utan spik, tack.",
+        "Kocken bytte till byggbranschen. Han ville ha mer att bita i.",
+        "Varför vilar byggkatten? Den är helt utschasad.",
+        "Vi har en stabil plan. Den ligger under ett bordsben.",
+        "Takläggaren hade höga ambitioner. Nu har han nått taket."
+    ];
+    private void NextJoke() => jokeIndex = (jokeIndex + 1) % jokes.Length;
+}

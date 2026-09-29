@@ -42,7 +42,7 @@ public class HomeTests : TestContext
 
     [Theory]
     [InlineData("/pizzerian", "Pizzerian", "Vesuvio", "Dagens rätt")]
-    [InlineData("/sperring", "Sperring", "Dagens rätt", "Vesuvio")]
+    [InlineData("/sperring", "Vi bygger.Du blir hungrig.", "Här bygger vi Sperrings nya beställningssida.", "Vesuvio")]
     public void Direct_address_loads_only_the_selected_restaurant(string path, string title, string dish, string otherDish)
     {
         Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo(path);
@@ -61,7 +61,7 @@ public class HomeTests : TestContext
         var page = RenderComponent<Home>();
         page.Find("[data-menu-item='2']").Click();
         navigation.NavigateTo("/sperring");
-        Assert.Equal("Sperring", page.Find("h1").TextContent);
+        Assert.Contains("Vi bygger.", page.Find("h1").TextContent);
         Assert.Empty(page.FindAll("#sauce, #drink, form"));
         Assert.DoesNotContain("Vesuvio", page.Markup);
     }
@@ -77,9 +77,9 @@ public class HomeTests : TestContext
         Assert.NotEmpty(page.FindAll("#sauce"));
         page.Find("[data-action='restaurants']").Click();
         page.Find("[data-restaurant='2']").Click();
-        page.WaitForAssertion(() => Assert.Contains("Dagens rätt", page.Markup));
+        page.WaitForAssertion(() => Assert.Contains("Här bygger vi Sperrings nya beställningssida.", page.Markup));
         Assert.DoesNotContain("Vesuvio", page.Markup);
-        page.Find("[data-menu-item='100']").Click();
+        Assert.Empty(page.FindAll("[data-menu-item]"));
         Assert.Empty(page.FindAll("#sauce"));
         Assert.Empty(page.FindAll("#drink"));
     }
@@ -155,17 +155,22 @@ public class HomeTests : TestContext
     }
 
     [Fact]
-    public void Ala_carte_saves_to_its_own_list_without_extras()
+    public void Construction_page_has_jokes_motion_controls_and_returns_to_doors()
     {
         var page = RenderComponent<Home>();
         page.Find("[data-restaurant='2']").Click();
-        page.Find("[data-menu-item='100']").Click();
-        page.Find("form").Submit();
-        page.WaitForAssertion(() => Assert.Equal(2, orders.SavedRestaurant));
-        Assert.Null(orders.Saved!.Sauce);
-        Assert.Null(orders.Saved.Drink);
+        Assert.Empty(page.FindAll("#daily-list, .menu-list, form"));
+        var firstJoke = page.Find(".dad-joke").TextContent;
+        page.Find(".joke-button").Click();
+        Assert.NotEqual(firstJoke, page.Find(".dad-joke").TextContent);
+        page.Find(".motion-button").Click();
+        Assert.Contains("paused", page.Find(".build-site").ClassList);
+        Assert.Equal("true", page.Find(".motion-button").GetAttribute("aria-pressed"));
+        page.Find("[data-action='restaurants']").Click();
+        Assert.Equal(2, page.FindAll(".restaurant-card").Count);
+        page.Find("[data-restaurant='1']").Click();
+        Assert.NotEmpty(page.FindAll("[data-menu-item='2']"));
     }
-
     [Fact]
     public void Delete_requires_confirmation_and_sends_current_revision()
     {

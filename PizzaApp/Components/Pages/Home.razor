@@ -44,6 +44,10 @@ else
     }
     </section>
 }
+else if (CurrentSection == "sperring")
+{
+    <SperringConstruction />
+}
 else if (restaurant != null)
 {
     <div class="restaurant-toolbar">
@@ -349,6 +353,7 @@ else if (restaurant != null)
 
     private async Task LoadRestaurants()
     {
+        if (CurrentSection == "sperring") { loading = false; return; }
         var version = loadVersion;
         loading = true; error = null;
         try

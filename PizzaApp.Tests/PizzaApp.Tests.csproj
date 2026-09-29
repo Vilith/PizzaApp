@@ -27,5 +27,6 @@
     <RazorComponent Include="../PizzaApp/Components/Pages/Register.razor" Link="Components/Pages/Register.razor" />
     <RazorComponent Include="../PizzaApp/Components/Pages/ProfileSettings.razor" Link="Components/Pages/ProfileSettings.razor" />
     <RazorComponent Include="../PizzaApp/Components/Pages/PasswordSettings.razor" Link="Components/Pages/PasswordSettings.razor" />
+    <RazorComponent Include="../PizzaApp/Components/Pages/SperringConstruction.razor" Link="Components/Pages/SperringConstruction.razor" />
   </ItemGroup>
 </Project>

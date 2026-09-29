@@ -93,3 +93,6 @@ Render: välj Web Service, Docker, Dockerfile i repots rot och port 10000. Docke
 Under Inställningar kan användaren byta sitt lösenord. Administratörer kan välja en kollega och skapa ett slumpat tillfälligt lösenord efter bekräftelse med sitt eget lösenord. Kollegan måste välja ett eget lösenord vid nästa inloggning innan beställningar kan göras. Kontot och historiken behålls.
 
 Servern behöver **Supabase__SecretKey** på Render (**Supabase:SecretKey** i lokala User Secrets). Använd en Supabase secret key och håll den enbart på servern. Ingen ny migration behövs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för konfiguration och arbetsgång.
+## Tillfällig byggsida för Sperring
+
+Sperring-dörren och direktadressen /sperring visar tills vidare en byggsida med hjälmkatter, kran, saftblandare och pappaskämt. Ingen meny eller orderlista hämtas för den sidan. Pizzerians flöde fungerar som tidigare. Animationerna kan pausas och respekterar prefers-reduced-motion. Sperrings befintliga data och API är kvar; detta är en tillfällig ersättning av gränssnittet.

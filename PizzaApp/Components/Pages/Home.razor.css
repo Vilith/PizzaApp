@@ -18,6 +18,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .order-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; margin-bottom: 28px; }
 .panel { background: white; border: 1px solid #dce4ed; border-radius: 14px; padding: 26px; }
 .menu-list { display: flex; flex-direction: column; gap: 10px; }
+.lunch-notice { background: #eaf2fc; border-left: 4px solid #377dca; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; color: #325680; font-weight: 600; }
 .menu-item { display: flex; align-items: center; gap: 15px; border: 1px solid #dce4ed; background: #fff; border-radius: 9px; padding: 16px; text-align: left; color: #1e324b; width: 100%; }
 .menu-item:hover, .menu-item.selected { background: #f0f6fe; border-color: #7fa8d6; }
 .menu-item strong, .menu-item small { display: block; }

@@ -75,6 +75,10 @@ else if (restaurant != null)
             <section class="panel menu-panel" aria-labelledby="menu-heading">
                 <p class="eyebrow">VÄLJ DIN FAVORIT</p>
                 <h2 id="menu-heading">@(restaurant.IsPizzeria ? "Meny" : "À la carte")</h2>
+                @if (restaurant.IsPizzeria)
+                {
+                    <p class="lunch-notice">Lunch: 11:30-14:00. Inkl, Sallad, Dricka. 95:-</p>
+                }
                 @if (menu.Count == 0) { <p>Menyn är inte upplagd ännu.</p> }
                 @if (restaurant.IsPizzeria)
                 {
@@ -114,7 +118,10 @@ else if (restaurant != null)
                                         {
                                             <small>@item.Description</small>
                                         }
-                                        <small>@item.Price.ToString("0.##") kr</small>
+                                        @if (!restaurant.IsPizzeria)
+                                        {
+                                            <small>@item.Price.ToString("0.##") kr</small>
+                                        }
                                     </span>
                                     <span class="add-icon" aria-hidden="true">+</span>
                                 </button>

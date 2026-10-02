@@ -127,6 +127,7 @@ namespace PizzaApp.Api.Data
                 new MenuItem { Id = 63, Category = "Kebab", Name = "Kebabrulle", Description = "Kebab, Pommes, Kebabsås", Price = 90, RestaurantId = 1 },
                 new MenuItem { Id = 64, Category = "Kebab", Name = "Kycklingrulle", Description = "Kyckling, Pommes, Kebabsås", Price = 90, RestaurantId = 1 },
                 new MenuItem { Id = 65, Category = "Stekrätter", Name = "Hamburgare 90gr", Description = "Med bröd & Pommes", Price = 80, RestaurantId = 1 },
+
                 // Example dishes from the wireframe; replace with the restaurant's actual menu.
                 new MenuItem { Id = 5, Name = "Oxfilé med potatis", Price = 189, RestaurantId = 2 },
                 new MenuItem { Id = 6, Name = "Kycklingfilé", Price = 159, RestaurantId = 2 },

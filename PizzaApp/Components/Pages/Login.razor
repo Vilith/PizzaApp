@@ -12,6 +12,7 @@ else
     <p class="eyebrow">PIZZAAPP</p>
     <h1 id="login-heading">Logga in</h1>
     <p>Logga in med ditt nick/alias och lösenord, eller skapa ett konto.</p>
+
     <EditForm Model="credentials" OnValidSubmit="SignIn">
         <DataAnnotationsValidator />
         <ValidationSummary />
@@ -23,6 +24,7 @@ else
             <button class="btn btn-primary" type="submit">@(busy ? "Loggar in…" : "Logga in")</button>
         </fieldset>
     </EditForm>
+
     <button class="btn btn-outline-primary mt-3" data-action="register" disabled="@busy" @onclick="ShowRegistration">Skapa konto</button>
     @if (error != null) { <p class="alert alert-danger mt-3" role="alert">@error</p> }
 </section>
@@ -34,6 +36,7 @@ else
     private bool registering;
     private void ShowRegistration() { credentials.Password = ""; error = null; registering = true; }
     private string? error;
+
     private async Task SignIn()
     {
         if (busy) return;

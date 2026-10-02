@@ -13,6 +13,7 @@ public class OrderApiService(HttpClient httpClient) : IOrderApiService
     {
         using var response = await httpClient.PutAsJsonAsync($"{Url(restaurantId)}/{id}/collector", input);
         await EnsureSuccess(response);
+
         return await response.Content.ReadFromJsonAsync<DailyOrderList>() ?? throw new HttpRequestException("Servern returnerade ingen lista.");
     }
 
@@ -20,6 +21,7 @@ public class OrderApiService(HttpClient httpClient) : IOrderApiService
     {
         using var response = await httpClient.PostAsJsonAsync($"{Url(restaurantId)}/complete", input);
         await EnsureSuccess(response);
+
         return await response.Content.ReadFromJsonAsync<DailyOrderList>() ?? throw new HttpRequestException("Servern returnerade ingen lista.");
     }
 
@@ -27,6 +29,7 @@ public class OrderApiService(HttpClient httpClient) : IOrderApiService
     {
         using var response = await httpClient.GetAsync(Url(restaurantId));
         await EnsureSuccess(response);
+
         return await response.Content.ReadFromJsonAsync<DailyOrderList>()
             ?? throw new HttpRequestException("Servern returnerade ingen beställningslista.");
     }
@@ -37,6 +40,7 @@ public class OrderApiService(HttpClient httpClient) : IOrderApiService
             ? await httpClient.PutAsJsonAsync($"{Url(restaurantId)}/{id}", input)
             : await httpClient.PostAsJsonAsync(Url(restaurantId), input);
         await EnsureSuccess(response);
+
         return await response.Content.ReadFromJsonAsync<OrderDetails>()
             ?? throw new HttpRequestException("Servern returnerade ingen beställning.");
     }
@@ -50,6 +54,7 @@ public class OrderApiService(HttpClient httpClient) : IOrderApiService
     private static async Task EnsureSuccess(HttpResponseMessage response)
     {
         if (response.IsSuccessStatusCode) return;
+
         if ((int)response.StatusCode is 400 or 404 or 409)
         {
             var problem = await response.Content.ReadFromJsonAsync<ApiProblem>();

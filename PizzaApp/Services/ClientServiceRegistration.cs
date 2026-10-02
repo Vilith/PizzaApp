@@ -17,6 +17,7 @@ public static class ClientServiceRegistration
             .AddHttpMessageHandler<AuthenticatedApiHandler>();
         services.AddHttpClient<IRestaurantApiService, RestaurantApiService>(client => client.BaseAddress = apiUrl)
             .AddHttpMessageHandler<AuthenticatedApiHandler>();
+
         return services;
     }
 }

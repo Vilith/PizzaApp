@@ -8,9 +8,11 @@ public sealed class AuthenticatedApiHandler(IAuthService auth) : DelegatingHandl
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var token = await auth.GetAccessTokenAsync();
+
         if (token == null) throw new AuthException("Logga in för att fortsätta.");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await base.SendAsync(request, cancellationToken);
+
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             response.Dispose();

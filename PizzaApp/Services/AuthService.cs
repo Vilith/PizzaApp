@@ -26,20 +26,26 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
             ClearSession();
             var version = sessionVersion;
             using var configurationResponse = await clients.CreateClient("PublicApi").GetAsync("api/auth/config");
+
             if (configurationResponse.StatusCode == HttpStatusCode.ServiceUnavailable)
                 throw new AuthException("Inloggningen är inte konfigurerad ännu. Kontakta administratören.");
             configurationResponse.EnsureSuccessStatusCode();
+
             config = await configurationResponse.Content.ReadFromJsonAsync<AuthConfiguration>()
                 ?? throw new AuthException("Inloggningen är inte konfigurerad.");
+
             if (!Uri.TryCreate(config.Url, UriKind.Absolute, out var uri) || uri.Scheme != "https")
                 throw new AuthException("Inloggningen kräver en säker anslutning.");
+
             var signedInTokens = await RequestTokensAsync("password", new AliasLogin { Alias = alias.Trim(), Password = password });
             var signedInUser = await LoadUserAsync(signedInTokens.AccessToken);
+
             if (version != sessionVersion) throw new AuthException("Inloggningen avbröts. Försök igen.");
             tokens = signedInTokens;
             User = signedInUser;
             Changed?.Invoke();
         }
+
         catch { ClearSession(); throw; }
         finally { gate.Release(); }
     }
@@ -50,6 +56,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         try
         {
             if (tokens == null || User == null) return null;
+
             if (DateTimeOffset.UtcNow >= expiresAt.AddSeconds(-60))
             {
                 try
@@ -57,6 +64,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
                     var version = sessionVersion;
                     var refreshed = await RequestTokensAsync("refresh_token", new { refresh_token = tokens.RefreshToken });
                     var refreshedUser = await LoadUserAsync(refreshed.AccessToken);
+
                     if (version != sessionVersion) return null;
                     tokens = refreshed;
                     User = refreshedUser;
@@ -74,16 +82,22 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         using var request = grant == "password" ? new HttpRequestMessage(HttpMethod.Post, "api/auth/login") : AuthRequest(HttpMethod.Post, "token?grant_type=" + grant);
         request.Content = JsonContent.Create(payload);
         using var response = await clients.CreateClient(grant == "password" ? "PublicApi" : "SupabaseAuth").SendAsync(request);
+
         if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             throw new AuthException(grant == "password" ? "Fel nick/alias eller lösenord, eller kontot är inte aktiverat." : "Din inloggning har gått ut. Logga in igen.");
+
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
             throw new AuthException("För många försök. Vänta en stund och försök igen.");
+
         if ((int)response.StatusCode >= 500)
             throw new AuthException("Inloggningen kunde inte nås. Försök igen senare.");
+
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<TokenResponse>();
+
         if (result == null || string.IsNullOrEmpty(result.AccessToken) || string.IsNullOrEmpty(result.RefreshToken) || result.ExpiresIn <= 0)
             throw new AuthException("Inloggningssvaret kunde inte läsas. Försök igen.");
+
         expiresAt = DateTimeOffset.UtcNow.AddSeconds(result.ExpiresIn);
         return result;
     }
@@ -93,8 +107,10 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         using var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/me");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         using var response = await clients.CreateClient("PublicApi").SendAsync(request);
+
         if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             throw new AuthException("Kontot saknar tillgång till PizzaApp. Kontakta administratören.");
+
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<SignedInUser>() ?? throw new AuthException("Inloggningssvaret kunde inte läsas.");
     }
@@ -107,9 +123,11 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
             var accessToken = tokens?.AccessToken;
             ClearSession();
             if (config == null || accessToken == null) return;
+
             using var request = AuthRequest(HttpMethod.Post, "logout?scope=local");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             using var response = await clients.CreateClient("SupabaseAuth").SendAsync(request);
+
             // Local credentials are already removed even if the network is unavailable.
             if (response.StatusCode != HttpStatusCode.Unauthorized) response.EnsureSuccessStatusCode();
         }
@@ -120,16 +138,20 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
     {
         await GetAccessTokenAsync();
         await gate.WaitAsync();
+
         try
         {
             if (tokens == null || User == null) throw new AuthException("Logga in för att fortsätta.");
+
             var version = sessionVersion;
             using var request = new HttpRequestMessage(HttpMethod.Put, "api/auth/profile");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
             request.Content = JsonContent.Create(input);
+
             using var response = await clients.CreateClient("PublicApi").SendAsync(request);
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             { ClearSession(); throw new AuthException("Din inloggning har gått ut. Logga in igen."); }
+
             if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Conflict or HttpStatusCode.Forbidden or HttpStatusCode.RequestEntityTooLarge)
             {
                 // Problem responses are available for validation/conflict; never expose provider internals.
@@ -141,8 +163,10 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
                 throw new AuthException("Profilen kunde inte sparas. Kontrollera behörigheten och bildens storlek.");
             }
             response.EnsureSuccessStatusCode();
+
             var updated = await response.Content.ReadFromJsonAsync<SignedInUser>()
                 ?? throw new AuthException("Profilens svar kunde inte läsas. Hämta profilen igen.");
+
             if (version != sessionVersion) throw new AuthException("Inloggningen har ändrats. Logga in igen.");
             User = updated;
             Changed?.Invoke();
@@ -154,12 +178,16 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
     {
         await GetAccessTokenAsync();
         await gate.WaitAsync();
+
         try
         {
             if (tokens == null || User == null) throw new AuthException("Logga in för att fortsätta.");
+
             var version = sessionVersion;
             var updated = await LoadUserAsync(tokens.AccessToken);
+
             if (version != sessionVersion) return;
+
             User = updated;
             Changed?.Invoke();
         }
@@ -175,8 +203,11 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
     {
         // Public client: registration must work before there is an authorized session.
         using var response = await clients.CreateClient("PublicApi").PostAsJsonAsync("api/registration/" + action, input);
+
         if (response.IsSuccessStatusCode) return;
+
         if ((int)response.StatusCode == 429) throw new AuthException("För många försök. Vänta en stund och försök igen.");
+
         if ((int)response.StatusCode is 400 or 403 or 409 or 503)
         {
             var problem = await response.Content.ReadFromJsonAsync<ProfileProblem>();
@@ -190,39 +221,50 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         using var response = await PasswordRequest(HttpMethod.Get, "accounts", null);
         return await response.Content.ReadFromJsonAsync<List<PasswordAccount>>() ?? [];
     }
+
     public async Task<TemporaryPassword> ResetPasswordAsync(ResetPasswordInput input)
     {
         using var response = await PasswordRequest(HttpMethod.Post, "reset", input);
         return await response.Content.ReadFromJsonAsync<TemporaryPassword>()
             ?? throw new AuthException("Svaret kunde inte läsas. Gör en ny återställning.");
     }
+
     public async Task ChangePasswordAsync(ChangePasswordInput input)
     {
         using var response = await PasswordRequest(HttpMethod.Post, "change", input);
         ClearSession();
     }
+
     private async Task<HttpResponseMessage> PasswordRequest(HttpMethod method, string path, object? payload)
     {
         var access = await GetAccessTokenAsync() ?? throw new AuthException("Logga in igen.");
         var version = sessionVersion;
+
         using var request = new HttpRequestMessage(method, "api/passwords/" + path);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", access);
+
         if (payload != null) request.Content = JsonContent.Create(payload);
+
         var response = await clients.CreateClient("PublicApi").SendAsync(request);
+
         if (version != sessionVersion)
         {
             response.Dispose();
             throw new AuthException("Inloggningen har ändrats. Logga in igen.");
         }
         if (response.IsSuccessStatusCode) return response;
+
         using (response)
         {
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             { ClearSession(); throw new AuthException("Logga in igen."); }
+
             if (response.StatusCode == HttpStatusCode.Forbidden)
                 throw new AuthException("Du saknar behörighet eller behöver först byta ditt tillfälliga lösenord.");
+
             if ((int)response.StatusCode == 429)
                 throw new AuthException("För många försök. Vänta en stund.");
+
             var problem = await response.Content.ReadFromJsonAsync<ProfileProblem>();
             throw new AuthException(problem?.Detail ?? "Åtgärden kunde inte bekräftas. Försök igen.");
         }

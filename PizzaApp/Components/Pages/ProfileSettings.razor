@@ -12,24 +12,31 @@ else
         <div class="profile-toolbar">
             @if (!Auth.User.MustChangePassword && !string.IsNullOrWhiteSpace(Auth.User.DisplayName)) { <a href="/">← Till beställningarna</a> }
         </div>
+
         <p class="eyebrow">MIN PROFIL</p>
         <h1 id="profile-heading">@(Auth.User.MustChangePassword ? "Välj ett eget lösenord" : string.IsNullOrWhiteSpace(Auth.User.DisplayName) ? "Välj ditt namn eller nick" : "Inställningar")</h1>
+
         @if (!Auth.User.MustChangePassword) { <p>Ditt unika nick/alias används när du loggar in och beställer. Byter du nick här använder du det nya vid nästa inloggning.</p> }
+
         <p class="account-email">@Auth.User.Email</p>
+
         @if (!Auth.User.MustChangePassword)
         {
         <EditForm Model="input" OnValidSubmit="Save" @key="input">
             <DataAnnotationsValidator />
             <ValidationSummary />
+
             <fieldset disabled="@busy">
                 <label for="profile-name">Namn / nick / alias</label>
                 <InputText id="profile-name" class="form-control" maxlength="100" autocomplete="nickname" @bind-Value="input.DisplayName" />
                 <p class="hint">Tidigare beställningar behåller sitt ursprungliga namn.</p>
                 <label for="profile-photo">Profilbild <span>(valfritt)</span></label>
                 <div class="photo-preview">
+
                     @if (input.AvatarDataUrl != null)
                     { <img src="@input.AvatarDataUrl" alt="Din profilbild" width="96" height="96" /> }
                     else { <span class="avatar-placeholder" aria-label="Ingen profilbild">☺</span> }
+
                     <div>
                         <InputFile id="profile-photo" accept="image/png,image/jpeg" OnChange="ChoosePhoto" />
                         <p class="hint">Välj en JPG- eller PNG-bild, högst 5 MB. Bilden förminskas automatiskt.</p>
@@ -37,16 +44,20 @@ else
                         { <button type="button" class="btn btn-link" data-action="remove-photo" @onclick="RemovePhoto">Ta bort bild</button> }
                     </div>
                 </div>
+
                 <div class="profile-actions">
                     <button class="btn btn-primary" type="submit">@(busy ? "Sparar…" : "Spara profil")</button>
                     <button class="btn btn-outline-secondary" type="button" @onclick="Reload">Hämta sparad profil</button>
                 </div>
             </fieldset>
         </EditForm>
+
         }
         <PasswordSettings />
+
         @if (success != null) { <p class="alert alert-success mt-3" role="status">@success</p> }
         @if (error != null) { <p class="alert alert-danger mt-3" role="alert">@error</p> }
+
     </section>
 }
 

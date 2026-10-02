@@ -23,8 +23,11 @@
 @code {
     private bool signingOut;
     private string? error;
+
     protected override void OnInitialized() => Auth.Changed += AuthChanged;
+
     private void AuthChanged() => _ = InvokeAsync(StateHasChanged);
+
     public void Dispose() => Auth.Changed -= AuthChanged;
 
     private async Task SignOut()

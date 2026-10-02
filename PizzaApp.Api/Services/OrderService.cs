@@ -69,6 +69,8 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             ?? throw new OrderException(400, "Rätten finns inte på restaurangens meny.");
         var order = id.HasValue ? await EditableAsync(restaurantId, id.Value, date, input.Revision) : new PizzaOrder
         { OwnerUserId = user.Id, RestaurantId = restaurantId, OrderDate = date, CreatedAt = clock.GetUtcNow().UtcDateTime };
+        if (item.IsHidden && (!id.HasValue || order.MenuItemId != item.Id))
+            throw new OrderException(400, "Rätten har utgått från menyn.");
         if (!id.HasValue || order.MenuItemId != item.Id) order.UnitPrice = item.Price;
         if (!id.HasValue)
         {

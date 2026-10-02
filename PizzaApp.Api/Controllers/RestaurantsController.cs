@@ -33,7 +33,7 @@ namespace PizzaApp.Api.Controllers
             }
 
             var menuItems = await _context.MenuItems
-                .Where(m => m.RestaurantId == id)
+                .Where(m => m.RestaurantId == id && !m.IsHidden)
                 .OrderBy(m => m.MenuNumber ?? m.Id)
                 .ThenBy(m => m.Id)
                 .ToListAsync();

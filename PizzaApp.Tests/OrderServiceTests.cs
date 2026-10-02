@@ -191,6 +191,28 @@ public class OrderServiceTests : IDisposable
         await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(1, edit, saved.Id));
     }
 
+    [Fact]
+    public async Task Hidden_dish_preserves_existing_orders_but_rejects_new_orders_and_switches()
+    {
+        var dish = await db.MenuItems.SingleAsync(m => m.Id == 62);
+        Assert.True(dish.IsHidden);
+        dish.IsHidden = false;
+        await db.SaveChangesAsync();
+        var input = Pizza(); input.MenuItemId = 62;
+        var oldOrder = await service.SaveAsync(1, input);
+        dish.IsHidden = true;
+        await db.SaveChangesAsync();
+        Assert.Equal("Kebabtallrik", Assert.Single((await service.GetTodayAsync(1)).Orders).Pizza);
+        await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(1, input));
+        input.Revision = oldOrder.Revision; input.Comment = "Tidigare beställning";
+        var updated = await service.SaveAsync(1, input, oldOrder.Id);
+        Assert.Equal(90m, updated.UnitPrice);
+        var regular = await service.SaveAsync(1, Pizza());
+        input.Revision = regular.Revision;
+        await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(1, input, regular.Id));
+        Assert.Equal(2, await db.Orders.CountAsync());
+    }
+
     public void Dispose() { db.Dispose(); connection.Dispose(); }
     [Fact]
     public async Task Completed_day_preserves_prices_collectors_and_choices_and_is_immutable()

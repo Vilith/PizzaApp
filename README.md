@@ -96,3 +96,7 @@ Servern behöver **Supabase__SecretKey** på Render (**Supabase:SecretKey** i lo
 ## Tillfällig byggsida för Sperring
 
 Sperring-dörren och direktadressen /sperring visar tills vidare en byggsida med hjälmkatter, kran, saftblandare och pappaskämt. Ingen meny eller orderlista hämtas för den sidan. Pizzerians flöde fungerar som tidigare. Animationerna kan pausas och respekterar prefers-reduced-motion. Sperrings befintliga data och API är kvar; detta är en tillfällig ersättning av gränssnittet.
+
+## Utgångna menyrätter
+
+Migrationen RemoveDuplicateMenuItems behåller Kebabtallrik (ID 62) med IsHidden = true för befintliga beställningar. Rätten visas inte i menyn och kan inte väljas för nya beställningar; befintliga beställningar kan fortfarande ändras. Kebabrulle (63) och Kycklingrulle (64) tas bort, vilket förutsätter att inga beställningar hänvisar till dem. Den synliga pizzeriamenyn har därefter 58 rätter. Kör migrationen mot avsedd databas före publicering av koden som använder IsHidden.

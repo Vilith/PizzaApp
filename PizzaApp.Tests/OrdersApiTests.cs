@@ -82,7 +82,8 @@ public class OrdersApiTests
         var restaurants = await client.GetFromJsonAsync<List<PizzaApp.Models.Restaurant>>("/api/restaurants");
         Assert.True(restaurants!.Single(r => r.Id == 1).IsPizzeria);
         var menu = await client.GetFromJsonAsync<List<PizzaApp.Models.MenuItem>>("/api/restaurants/1/menu");
-        Assert.Equal(61, menu!.Count);
+        Assert.Equal(58, menu!.Count);
+        Assert.DoesNotContain(menu, item => item.Id is 62 or 63 or 64);
         var pizzas = menu.Where(m => m.Category == "Pizzor").ToList();
         Assert.Equal(Enumerable.Range(1, 43), pizzas.Select(m => m.MenuNumber!.Value));
         Assert.All(pizzas, item =>
@@ -95,7 +96,7 @@ public class OrdersApiTests
         Assert.Contains("Dubbel inbakad", menu[35].Description);
         Assert.Equal(new[] { "Pizzor", "Sallader", "Kebab", "Stekrätter" }, menu.Select(m => m.Category).Distinct());
         Assert.Equal(8, menu.Count(m => m.Category == "Sallader"));
-        Assert.Equal(9, menu.Count(m => m.Category == "Kebab"));
+        Assert.Equal(6, menu.Count(m => m.Category == "Kebab"));
         Assert.All(menu.Where(m => m.Category is "Sallader" or "Kebab"), item =>
         {
             Assert.Equal(90m, item.Price);

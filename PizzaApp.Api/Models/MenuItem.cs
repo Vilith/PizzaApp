@@ -7,6 +7,7 @@ namespace PizzaApp.Api.Models
         public string Category { get; set; } = string.Empty;
         public int? MenuNumber { get; set; }
         public string Description { get; set; } = string.Empty;
+        public bool IsHidden { get; set; }
         public decimal Price { get; set; }
         public int RestaurantId { get; set; }
         public Restaurant Restaurant { get; set; } = null!;

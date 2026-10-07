@@ -36,6 +36,15 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         var orders = await db.Orders.AsNoTracking()
             .Where(o => o.RestaurantId == restaurantId && o.OrderDate == date)
             .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id).ToListAsync();
+        var owners = orders.Where(o => o.OwnerUserId.HasValue).Select(o => o.OwnerUserId!.Value).Distinct().ToArray();
+        var avatars = await db.UserProfiles.AsNoTracking().Where(p => owners.Contains(p.UserId))
+            .ToDictionaryAsync(p => p.UserId, p => p.AvatarDataUrl);
+        var details = orders.Select(o =>
+        {
+            var detail = Details(o);
+            if (o.OwnerUserId.HasValue) detail.AvatarDataUrl = avatars.GetValueOrDefault(o.OwnerUserId.Value);
+            return detail;
+        }).ToList();
         return new()
         {
             Date = date, IsPizzeria = restaurant.IsPizzeria,
@@ -43,7 +52,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             CollectedBy = completed == null ? [] : JsonSerializer.Deserialize<List<string>>(completed.CollectorsJson)!,
             DeadlinePassed = restaurant.IsPizzeria && passed,
             IsLocked = completed != null || restaurant.IsPizzeria && passed && options.Value.LockAfterDeadline,
-            Orders = orders.Select(Details).ToList(),
+            Orders = details,
             Summary = orders.GroupBy(o => new { o.MenuItemId, o.Pizza, o.Sauce, o.Drink, o.Comment })
                 .Select(g => new OrderSummary(g.Key.Pizza, g.Key.Sauce, g.Key.Drink, g.Key.Comment, g.Sum(o => o.Quantity)))
                 .OrderBy(o => o.Pizza).ThenBy(o => o.Sauce).ThenBy(o => o.Drink).ThenBy(o => o.Comment).ToList()
@@ -69,6 +78,14 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             ?? throw new OrderException(400, "Rätten finns inte på restaurangens meny.");
         var order = id.HasValue ? await EditableAsync(restaurantId, id.Value, date, input.Revision) : new PizzaOrder
         { OwnerUserId = user.Id, RestaurantId = restaurantId, OrderDate = date, CreatedAt = clock.GetUtcNow().UtcDateTime };
+        if (restaurant.Name == "Sperring")
+        {
+            var weeks = await db.SperringWeeks.AsNoTracking().ToListAsync();
+            var available = weeks.Select(w => JsonSerializer.Deserialize<SperringMenu>(w.MenuJson)!)
+                .Where(w => date >= w.Monday && date <= w.Monday.AddDays(4))
+                .Any(w => w.Dishes(date.DayNumber - w.Monday.DayNumber).Contains(item.Name, StringComparer.OrdinalIgnoreCase));
+            if (!available) throw new OrderException(400, "Rätten finns inte på dagens Sperringmeny. Uppdatera sidan.");
+        }
         if (item.IsHidden && (!id.HasValue || order.MenuItemId != item.Id))
             throw new OrderException(400, "Rätten har utgått från menyn.");
         if (!id.HasValue || order.MenuItemId != item.Id) order.UnitPrice = item.Price;

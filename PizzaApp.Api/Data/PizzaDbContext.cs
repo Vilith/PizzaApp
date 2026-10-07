@@ -15,6 +15,7 @@ namespace PizzaApp.Api.Data
 
         public DbSet<Restaurant> Restaurants => Set<Restaurant>();
         public DbSet<MenuItem> MenuItems => Set<MenuItem>();
+        public DbSet<SperringWeek> SperringWeeks => Set<SperringWeek>();
 
         public static string NormalizeAlias(string alias) => alias.Trim().ToUpperInvariant();
 
@@ -33,6 +34,8 @@ namespace PizzaApp.Api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<SperringWeek>().Property(w => w.Id).ValueGeneratedNever();
+            modelBuilder.Entity<SperringWeek>().Property(w => w.Revision).IsConcurrencyToken();
             modelBuilder.Entity<UserProfile>().HasKey(p => p.UserId);
             modelBuilder.Entity<UserProfile>().Property(p => p.DisplayName).HasMaxLength(100);
             modelBuilder.Entity<UserProfile>().Property(p => p.AliasKey).HasMaxLength(100);

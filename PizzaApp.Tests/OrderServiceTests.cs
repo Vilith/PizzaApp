@@ -24,6 +24,9 @@ public class OrderServiceTests : IDisposable
         db.Database.EnsureCreated();
         db.MenuItems.Add(new MenuItem { Id = 100, Name = "Dagens rätt", Price = 100, RestaurantId = 2 });
         db.UserProfiles.Add(new() { UserId = actor.Id, DisplayName = "Anna", Revision = Guid.NewGuid() });
+        db.SperringWeeks.Add(new SperringWeek { Id = 1, Revision = Guid.NewGuid(),
+            MenuJson = System.Text.Json.JsonSerializer.Serialize(new SperringMenu
+            { Slot = 1, Year = 2026, Week = 39, RegularDishes = "Dagens rätt\nOxfilé med potatis" }) });
         db.SaveChanges();
         service = new(db, clock, Options.Create(settings), actor);
     }

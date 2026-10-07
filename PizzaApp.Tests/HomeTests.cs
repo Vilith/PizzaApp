@@ -19,6 +19,7 @@ public class HomeTests : TestContext
         JSInterop.SetupVoid("pizzaEntrance.play").SetVoidResult();
         JSInterop.SetupVoid("pizzaEntrance.play", "Pizza").SetVoidResult();
         JSInterop.SetupVoid("pizzaEntrance.play", "Sperring").SetVoidResult();
+        Services.AddSingleton<ISperringApiService>(new FakeSperring());
         Services.AddSingleton<IAuthService>(auth);
         Services.AddSingleton<IOrderApiService>(orders);
         Services.AddSingleton<IRestaurantApiService>(new FakeRestaurants());
@@ -42,7 +43,7 @@ public class HomeTests : TestContext
 
     [Theory]
     [InlineData("/pizzerian", "Pizzerian", "Vesuvio", "Dagens rätt")]
-    [InlineData("/sperring", "Vi bygger.Du blir hungrig.", "Här bygger vi Sperrings nya beställningssida.", "Vesuvio")]
+    [InlineData("/sperring", "Veckans goda.", "Meny vecka", "Vesuvio")]
     public void Direct_address_loads_only_the_selected_restaurant(string path, string title, string dish, string otherDish)
     {
         Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo(path);
@@ -61,7 +62,7 @@ public class HomeTests : TestContext
         var page = RenderComponent<Home>();
         page.Find("[data-menu-item='2']").Click();
         navigation.NavigateTo("/sperring");
-        Assert.Contains("Vi bygger.", page.Find("h1").TextContent);
+        Assert.Contains("Veckans goda.", page.Find("h1").TextContent);
         Assert.Empty(page.FindAll("#sauce, #drink, form"));
         Assert.DoesNotContain("Vesuvio", page.Markup);
     }
@@ -77,7 +78,7 @@ public class HomeTests : TestContext
         Assert.NotEmpty(page.FindAll("#sauce"));
         page.Find("[data-action='restaurants']").Click();
         page.Find("[data-restaurant='2']").Click();
-        page.WaitForAssertion(() => Assert.Contains("Här bygger vi Sperrings nya beställningssida.", page.Markup));
+        page.WaitForAssertion(() => Assert.Contains("Meny vecka", page.Markup));
         Assert.DoesNotContain("Vesuvio", page.Markup);
         Assert.Empty(page.FindAll("[data-menu-item]"));
         Assert.Empty(page.FindAll("#sauce"));
@@ -155,17 +156,12 @@ public class HomeTests : TestContext
     }
 
     [Fact]
-    public void Construction_page_has_jokes_motion_controls_and_returns_to_doors()
+    public void Sperring_has_two_week_menus_and_returns_to_doors()
     {
         var page = RenderComponent<Home>();
         page.Find("[data-restaurant='2']").Click();
-        Assert.Empty(page.FindAll("#daily-list, .menu-list, form"));
-        var firstJoke = page.Find(".dad-joke").TextContent;
-        page.Find(".joke-button").Click();
-        Assert.NotEqual(firstJoke, page.Find(".dad-joke").TextContent);
-        page.Find(".motion-button").Click();
-        Assert.Contains("paused", page.Find(".build-site").ClassList);
-        Assert.Equal("true", page.Find(".motion-button").GetAttribute("aria-pressed"));
+        Assert.Equal(2, page.FindAll(".week-card").Count);
+        Assert.Single(page.FindAll("#daily-list"));
         page.Find("[data-action='restaurants']").Click();
         Assert.Equal(2, page.FindAll(".restaurant-card").Count);
         page.Find("[data-restaurant='1']").Click();
@@ -320,6 +316,13 @@ public class HomeTests : TestContext
         page.WaitForAssertion(() => Assert.NotNull(orders.Saved));
         Assert.Equal(2, orders.Saved!.MenuItemId);
         Assert.Equal("Ingen sås", orders.Saved.Sauce);
+    }
+
+    private class FakeSperring : ISperringApiService
+    {
+        public Task<SperringPage> GetAsync() => Task.FromResult(new SperringPage(2,
+            [new() { Slot = 1, Year = 2026, Week = 39 }, new() { Slot = 2, Year = 2026, Week = 40 }], []));
+        public Task SaveAsync(SperringMenu menu) => Task.CompletedTask;
     }
 
     private class FakeRestaurants : IRestaurantApiService

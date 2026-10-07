@@ -11,6 +11,8 @@ public static class ClientServiceRegistration
         // Never register this singleton session in the API/server's container.
         services.AddSingleton<IAuthService, AuthService>();
         services.AddTransient<AuthenticatedApiHandler>();
+        services.AddHttpClient<ISperringApiService, SperringApiService>(client => client.BaseAddress = apiUrl)
+            .AddHttpMessageHandler<AuthenticatedApiHandler>();
         services.AddHttpClient("PublicApi", client => client.BaseAddress = apiUrl);
         services.AddHttpClient("SupabaseAuth");
         services.AddHttpClient<IOrderApiService, OrderApiService>(client => client.BaseAddress = apiUrl)

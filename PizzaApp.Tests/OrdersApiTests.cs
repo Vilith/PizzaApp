@@ -147,6 +147,44 @@ public class OrdersApiTests
         await Assert.ThrowsAsync<PizzaApp.Services.OrderApiException>(() => api.SaveAsync(1, Pizza()));
     }
 
+    [Fact]
+    public async Task Sperring_admin_publishes_two_weeks_with_conflicts_and_member_permissions()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        var page = (await client.GetFromJsonAsync<SperringPage>("/api/sperring"))!;
+        Assert.Equal(new[] { 39, 40 }, page.Menus.Select(m => m.Week));
+        var menu = page.Menus[0];
+        menu.RegularDishes = "Köttbullar\nVegetarisk pasta";
+        menu.Days[1] = "Tisdagssoppa";
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "member");
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync("/api/sperring/1", menu)).StatusCode);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "admin");
+        (await client.PutAsJsonAsync("/api/sperring/1", menu)).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PutAsJsonAsync("/api/sperring/1", menu)).StatusCode);
+        page = (await client.GetFromJsonAsync<SperringPage>("/api/sperring"))!;
+        Assert.Equal("Tisdagssoppa", page.Menus[0].Days[1]);
+        var next = page.Menus[1]; next.Week = 39;
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync("/api/sperring/2", next)).StatusCode);
+        next.Week = 53; // 2026 has 53 ISO weeks; 2025 does not.
+        next.Year = 2025;
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync("/api/sperring/2", next)).StatusCode);
+        next.Year = 2026; next.Week = 40; next.RegularDishes = "Nästa veckas fisk";
+        (await client.PutAsJsonAsync("/api/sperring/2", next)).EnsureSuccessStatusCode();
+        page = (await client.GetFromJsonAsync<SperringPage>("/api/sperring"))!;
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "member");
+        var profile = (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!;
+        (await client.PutAsJsonAsync("/api/auth/profile", new ProfileInput { DisplayName = "Lunchvän", AvatarDataUrl = TestProfileImage.Png, Revision = profile.ProfileRevision })).EnsureSuccessStatusCode();
+        var input = new OrderInput { MenuItemId = page.Dishes.Single(d => d.Name == "Tisdagssoppa").Id };
+        (await client.PostAsJsonAsync("/api/restaurants/2/orders", input)).EnsureSuccessStatusCode();
+        var order = Assert.Single((await client.GetFromJsonAsync<DailyOrderList>("/api/restaurants/2/orders"))!.Orders);
+        Assert.Equal("Lunchvän", order.Name);
+        Assert.Equal(TestProfileImage.Png, order.AvatarDataUrl);
+        input.MenuItemId = page.Dishes.Single(d => d.Name == "Nästa veckas fisk").Id;
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/restaurants/2/orders", input)).StatusCode);
+        input.MenuItemId = 5; // Legacy example dishes must not bypass the published menu.
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/restaurants/2/orders", input)).StatusCode);
+    }
+
     private sealed class TestApp(bool locked = false) : WebApplicationFactory<Program>
     {
         public new HttpClient CreateClient()

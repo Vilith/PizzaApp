@@ -1,14 +1,10 @@
-@inject NavigationManager Navigation
 @inject ISperringApiService Menus
 @inject IOrderApiService Orders
 @inject IAuthService Auth
 
 <section class="sperring" aria-labelledby="sperring-title">
     <header class="sperring-header">
-        <button class="back" data-action="restaurants" @onclick='() => Navigation.NavigateTo("/")'>← Till startsidan</button>
-        <p class="eyebrow">LUNCH HOS SPERRING</p>
-        <h1 id="sperring-title">Veckans goda.</h1>
-        <p>Två veckors lunchmenyer. Hitta din favorit för dagen.</p>
+        <h1 id="sperring-title">Veckans goda.</h1>        
     </header>
     @if (error != null) { <p class="notice error" role="alert">@error</p> }
     @if (message != null) { <p class="notice" role="status">@message</p> }

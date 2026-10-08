@@ -7,7 +7,7 @@
     @if (Auth.User is { } user)
     {
         <nav class="app-header" aria-label="Huvudnavigation">
-            <a href="/" class="home-link">Startsida</a>
+            <a href="/" class="home-link"><span class="home-arrow" aria-hidden="true">←</span> Startsida</a>
             <span class="profile-identity">
                 @if (user.AvatarDataUrl != null) { <img src="@user.AvatarDataUrl" alt="" width="32" height="32" /> }
                 <span>@user.DisplayName</span>

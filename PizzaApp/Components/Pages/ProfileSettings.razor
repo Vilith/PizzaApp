@@ -9,10 +9,6 @@
 else
 {
     <section class="profile-panel" aria-labelledby="profile-heading">
-        <div class="profile-toolbar">
-            @if (!Auth.User.MustChangePassword && !string.IsNullOrWhiteSpace(Auth.User.DisplayName)) { <a href="/">← Till beställningarna</a> }
-        </div>
-
         <p class="eyebrow">MIN PROFIL</p>
         <h1 id="profile-heading">@(Auth.User.MustChangePassword ? "Välj ett eget lösenord" : string.IsNullOrWhiteSpace(Auth.User.DisplayName) ? "Välj ditt namn eller nick" : "Inställningar")</h1>
 

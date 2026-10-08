@@ -7,13 +7,18 @@
     @if (Auth.User is { } user)
     {
         <nav class="app-header" aria-label="Huvudnavigation">
-            <a href="/" class="home-link"><span class="home-arrow" aria-hidden="true">←</span> Startsida</a>
+            @if (!IsHome)
+            {
+                <a href="/" class="home-link"><span class="home-arrow" aria-hidden="true">←</span> Startsida</a>
+            }
             <span class="profile-identity">
                 @if (user.AvatarDataUrl != null) { <img src="@user.AvatarDataUrl" alt="" width="32" height="32" /> }
                 <span>@user.DisplayName</span>
             </span>
-            <a href="/settings" class="nav-action" data-action="settings">Inställningar</a>
-            <button class="nav-action" data-action="logout" disabled="@signingOut" @onclick="SignOut">@(signingOut ? "Loggar ut…" : "Logga ut")</button>
+            <div class="nav-actions">
+                <a href="/settings" class="nav-action" data-action="settings">Inställningar</a>
+                <button class="nav-action" data-action="logout" disabled="@signingOut" @onclick="SignOut">@(signingOut ? "Loggar ut…" : "Logga ut")</button>
+            </div>
         </nav>
         @if (error != null) { <p class="alert alert-danger" role="alert">@error</p> }
     }
@@ -24,11 +29,23 @@
     private bool signingOut;
     private string? error;
 
-    protected override void OnInitialized() => Auth.Changed += AuthChanged;
+    private bool IsHome => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/') == new Uri(Navigation.BaseUri).AbsolutePath.TrimEnd('/');
+
+    protected override void OnInitialized()
+    {
+        Auth.Changed += AuthChanged;
+        Navigation.LocationChanged += LocationChanged;
+    }
+
+    private void LocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) => _ = InvokeAsync(StateHasChanged);
 
     private void AuthChanged() => _ = InvokeAsync(StateHasChanged);
 
-    public void Dispose() => Auth.Changed -= AuthChanged;
+    public void Dispose()
+    {
+        Auth.Changed -= AuthChanged;
+        Navigation.LocationChanged -= LocationChanged;
+    }
 
     private async Task SignOut()
     {

@@ -36,19 +36,20 @@ public class HomeTests : TestContext
         page.Find("[data-restaurant='1']").Click();
         Assert.Contains(JSInterop.Invocations, call => call.Identifier == "pizzaEntrance.play" && Equals(call.Arguments[0], "Pizza"));
         Assert.EndsWith("/pizzerian", Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri);
-        page.Find("[data-action='restaurants']").Click();
+        Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/");
         Assert.Equal(2, page.FindAll(".restaurant-card").Count);
         Assert.Empty(page.FindAll("#daily-list, .menu-list"));
     }
 
     [Theory]
-    [InlineData("/pizzerian", "Pizzerian", "Vesuvio", "Dagens rätt")]
+    [InlineData("/pizzerian", null, "Vesuvio", "Dagens rätt")]
     [InlineData("/sperring", "Veckans goda.", "Meny vecka", "Vesuvio")]
-    public void Direct_address_loads_only_the_selected_restaurant(string path, string title, string dish, string otherDish)
+    public void Direct_address_loads_only_the_selected_restaurant(string path, string? title, string dish, string otherDish)
     {
         Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo(path);
         var page = RenderComponent<Home>();
-        Assert.Equal(title, page.Find("h1").TextContent);
+        if (title == null) Assert.Empty(page.FindAll("h1"));
+        else Assert.Equal(title, page.Find("h1").TextContent);
         Assert.Contains(dish, page.Markup);
         Assert.DoesNotContain(otherDish, page.Markup);
         Assert.Empty(page.FindAll(".restaurant-card"));
@@ -76,7 +77,7 @@ public class HomeTests : TestContext
         Assert.Contains("11:15", page.Markup);
         page.Find("[data-menu-item='2']").Click();
         Assert.NotEmpty(page.FindAll("#sauce"));
-        page.Find("[data-action='restaurants']").Click();
+        Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/");
         page.Find("[data-restaurant='2']").Click();
         page.WaitForAssertion(() => Assert.Contains("Meny vecka", page.Markup));
         Assert.DoesNotContain("Vesuvio", page.Markup);
@@ -162,7 +163,7 @@ public class HomeTests : TestContext
         page.Find("[data-restaurant='2']").Click();
         Assert.Equal(2, page.FindAll(".week-card").Count);
         Assert.Single(page.FindAll("#daily-list"));
-        page.Find("[data-action='restaurants']").Click();
+        Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/");
         Assert.Equal(2, page.FindAll(".restaurant-card").Count);
         page.Find("[data-restaurant='1']").Click();
         Assert.NotEmpty(page.FindAll("[data-menu-item='2']"));
@@ -198,7 +199,7 @@ public class HomeTests : TestContext
         page.WaitForAssertion(() => Assert.Contains("Dagens lista är rensad", page.Markup));
         Assert.Empty(page.FindAll("#daily-list .order-row, #daily-list details"));
         // Returning to the restaurant reads persisted completion, not local UI state.
-        page.Find("[data-action='restaurants']").Click();
+        Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/");
         page.Find("[data-restaurant='1']").Click();
         page.WaitForAssertion(() => Assert.Contains("Dagens lista är rensad", page.Markup));
         Assert.Empty(page.FindAll("#daily-list .order-row, #daily-list details"));

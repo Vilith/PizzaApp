@@ -50,13 +50,6 @@ else if (CurrentSection == "sperring")
 }
 else if (restaurant != null)
 {
-    <div class="restaurant-toolbar">
-        <button class="text-button" data-action="restaurants" disabled="@(busy || loading)" @onclick="Back">← Till startsidan</button>
-        <span class="restaurant-label">@(restaurant.IsPizzeria ? "Pizzerian" : "Sperring")</span>
-    </div>
-    <div class="page-heading">
-        <div><p class="eyebrow">@restaurant.Name</p><h1>@(restaurant.IsPizzeria ? "Pizzerian" : "Sperring")</h1></div>
-    </div>
     @if (loading)
     {
         <p role="status">Laddar meny och dagens lista…</p>
@@ -462,8 +455,6 @@ else if (restaurant != null)
     }
 
     private Task Reload() => restaurant == null ? LoadRestaurants() : daily == null ? SelectRestaurant(restaurant) : Refresh();
-
-    private void Back() { if (busy || loading) return; Navigation.NavigateTo("/"); }
 
     private void CancelEdit() { input = null; editingId = null; }
 

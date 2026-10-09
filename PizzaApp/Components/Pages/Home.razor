@@ -85,6 +85,12 @@ else if (restaurant != null)
                         }
                     </div>
                 }
+                @if (restaurant.IsPizzeria)
+                {
+                    <button class="menu-item" data-action="drink-only" disabled="@(busy || daily.IsLocked)" @onclick="SelectDrinkOnly">
+                        <span><strong>🥤 Enbart dryck</strong><small>15 kr per burk · Välj sort och antal</small></span><span class="add-icon" aria-hidden="true">+</span>
+                    </button>
+                }
                 <div id="menu-tab-panel" role="@(restaurant.IsPizzeria ? "tabpanel" : null)"
                      aria-labelledby="@(restaurant.IsPizzeria ? TabId(ActiveTab) : null)">
                 @foreach (var group in menu.Where(item => !restaurant.IsPizzeria || MenuTab(item) == ActiveTab)
@@ -133,18 +139,21 @@ else if (restaurant != null)
                 else
                 {
                     <p class="eyebrow">@(editingId.HasValue ? "ÄNDRA BESTÄLLNING" : "DITT VAL")</p>
-                    <h2 id="selection-heading">@menu.FirstOrDefault(m => m.Id == input.MenuItemId)?.Name</h2>
+                    <h2 id="selection-heading">@(input.DrinkOnly ? "Enbart dryck · 15 kr per burk" : menu.FirstOrDefault(m => m.Id == input.MenuItemId)?.Name)</h2>
                     <EditForm Model="input" OnValidSubmit="Save" @key="input">
                         <DataAnnotationsValidator />
                         <ValidationSummary />
                         <fieldset disabled="@(busy || daily.IsLocked)">
                             @if (restaurant.IsPizzeria)
                             {
+                                @if (!input.DrinkOnly)
+                                {
                                 <label for="sauce">Välj sås <span>(obligatoriskt)</span></label>
                                 <InputSelect id="sauce" class="form-select" @bind-Value="input.Sauce" required>
                                     <option value="">Välj sås…</option>
                                     @foreach (var sauce in PizzaChoices.Sauces) { <option value="@sauce">@sauce</option> }
                                 </InputSelect>
+                                }
                                 <label for="drink">Välj dryck <span>(obligatoriskt)</span></label>
                                 <InputSelect id="drink" class="form-select" @bind-Value="input.Drink" required>
                                     <option value="">Välj dryck…</option>
@@ -178,7 +187,7 @@ else if (restaurant != null)
             }
             else
             {
-            <p class="muted">Gemensam lista · @daily.Orders.Sum(o => o.Quantity) portioner · Hämtad @lastRefreshed</p>
+            <p class="muted">Gemensam lista · @daily.Orders.Where(o => !o.DrinkOnly).Sum(o => o.Quantity) portioner · @daily.Orders.Where(o => o.DrinkOnly).Sum(o => o.Quantity) extra drycker · Hämtad @lastRefreshed</p>
             @if (daily.Orders.Count == 0)
             {
                 <div class="empty-list">Ingen har beställt ännu. Lägg till dagens första rätt!</div>
@@ -466,7 +475,17 @@ else if (restaurant != null)
         if (input == null) input = new() { Name = Auth.User?.DisplayName ?? "" };
 
         input.MenuItemId = item.Id;
+        input.DrinkOnly = false;
         input.Sauce = restaurant?.IsPizzeria == true ? MenuSauce.DefaultFor(item.Description) : null;
+        focusSelection = true;
+        error = success = null;
+    }
+
+    private void SelectDrinkOnly()
+    {
+        if (busy || daily?.IsLocked != false || restaurant?.IsPizzeria != true) return;
+        input = new() { DrinkOnly = true, Name = Auth.User?.DisplayName ?? "", Drink = input?.Drink };
+        editingId = null;
         focusSelection = true;
         error = success = null;
     }
@@ -475,7 +494,7 @@ else if (restaurant != null)
     {
         focusSelection = true;
         editingId = order.Id; error = success = null;
-        input = new() { MenuItemId = order.MenuItemId, Quantity = order.Quantity, Name = order.Name,
+        input = new() { MenuItemId = order.MenuItemId, DrinkOnly = order.DrinkOnly, Quantity = order.Quantity, Name = order.Name,
             Sauce = order.Sauce, Drink = order.Drink, Comment = order.Comment, Revision = order.Revision };
     }
 
@@ -483,8 +502,8 @@ else if (restaurant != null)
     {
         if (busy || input == null || restaurant == null || daily?.IsLocked != false) return;
         var version = loadVersion;
-        if (restaurant.IsPizzeria && (string.IsNullOrEmpty(input.Sauce) || string.IsNullOrEmpty(input.Drink)))
-        { error = "Välj sås och dryck innan du sparar."; return; }
+        if (restaurant.IsPizzeria && ((!input.DrinkOnly && string.IsNullOrEmpty(input.Sauce)) || string.IsNullOrEmpty(input.Drink)))
+        { error = input.DrinkOnly ? "Välj dryck innan du sparar." : "Välj sås och dryck innan du sparar."; return; }
         busy = true; error = success = null;
 
         try

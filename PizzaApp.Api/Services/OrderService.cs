@@ -70,12 +70,17 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         var errors = new List<ValidationResult>();
         if (!Validator.TryValidateObject(input, new ValidationContext(input), errors, true))
             throw new OrderException(400, string.Join(" ", errors.Select(e => e.ErrorMessage)));
-        if (restaurant.IsPizzeria && (!PizzaChoices.Sauces.Contains(input.Sauce) || !PizzaChoices.Drinks.Contains(input.Drink)))
+        if (input.DrinkOnly && (!restaurant.IsPizzeria || input.MenuItemId != 0 || input.Sauce != null))
+            throw new OrderException(400, "Enbart dryck kan beställas från pizzerian utan maträtt eller sås.");
+        if (input.DrinkOnly && !PizzaChoices.Drinks.Contains(input.Drink))
+            throw new OrderException(400, "Välj en dryck.");
+        if (restaurant.IsPizzeria && ((!input.DrinkOnly && !PizzaChoices.Sauces.Contains(input.Sauce)) || !PizzaChoices.Drinks.Contains(input.Drink)))
             throw new OrderException(400, "Välj en sås (eller Ingen sås) och en dryck.");
         if (!restaurant.IsPizzeria && (input.Sauce != null || input.Drink != null))
             throw new OrderException(400, "À la carte har inga val för sås eller dryck.");
-        var item = await db.MenuItems.AsNoTracking().SingleOrDefaultAsync(m => m.Id == input.MenuItemId && m.RestaurantId == restaurantId)
-            ?? throw new OrderException(400, "Rätten finns inte på restaurangens meny.");
+        var item = input.DrinkOnly ? null : await db.MenuItems.AsNoTracking()
+            .SingleOrDefaultAsync(m => m.Id == input.MenuItemId && m.RestaurantId == restaurantId);
+        if (!input.DrinkOnly && item == null) throw new OrderException(400, "Rätten finns inte på restaurangens meny.");
         var order = id.HasValue ? await EditableAsync(restaurantId, id.Value, date, input.Revision) : new PizzaOrder
         { OwnerUserId = user.Id, RestaurantId = restaurantId, OrderDate = date, CreatedAt = clock.GetUtcNow().UtcDateTime };
         if (restaurant.Name == "Sperring")
@@ -83,12 +88,13 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             var weeks = await db.SperringWeeks.AsNoTracking().ToListAsync();
             var available = weeks.Select(w => JsonSerializer.Deserialize<SperringMenu>(w.MenuJson)!)
                 .Where(w => date >= w.Monday && date <= w.Monday.AddDays(4))
-                .Any(w => w.Dishes(date.DayNumber - w.Monday.DayNumber).Contains(item.Name, StringComparer.OrdinalIgnoreCase));
+                .Any(w => w.Dishes(date.DayNumber - w.Monday.DayNumber).Contains(item!.Name, StringComparer.OrdinalIgnoreCase));
             if (!available) throw new OrderException(400, "Rätten finns inte på dagens Sperringmeny. Uppdatera sidan.");
         }
-        if (item.IsHidden && (!id.HasValue || order.MenuItemId != item.Id))
+        if (item is { IsHidden: true } && (!id.HasValue || order.MenuItemId != item.Id))
             throw new OrderException(400, "Rätten har utgått från menyn.");
-        if (!id.HasValue || order.MenuItemId != item.Id) order.UnitPrice = item.Price;
+        if (input.DrinkOnly) order.UnitPrice = PizzeriaStatistics.ExtraDrinkPrice;
+        else if (!id.HasValue || order.MenuItemId != item!.Id) order.UnitPrice = item!.Price;
         if (!id.HasValue)
         {
             var profile = await db.UserProfiles.AsNoTracking().SingleOrDefaultAsync(p => p.UserId == user.Id);
@@ -96,8 +102,8 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
                 throw new OrderException(409, "Välj ditt namn eller nick under Inställningar innan du beställer.");
             order.Name = profile.DisplayName;
         }
-        order.MenuItemId = item.Id;
-        order.Pizza = item.Name;
+        order.MenuItemId = item?.Id;
+        order.Pizza = input.DrinkOnly ? "Enbart dryck" : item!.Name;
         order.Comment = string.IsNullOrWhiteSpace(input.Comment) ? null : input.Comment.Trim();
         order.Quantity = input.Quantity;
         order.Sauce = input.Sauce;
@@ -179,7 +185,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             var snapshot = orders.Select(o =>
             {
                 var details = Details(o);
-                details.Category = categories.GetValueOrDefault(details.MenuItemId);
+                details.Category = details.DrinkOnly ? "Dryck" : categories.GetValueOrDefault(details.MenuItemId);
                 return details;
             }).ToList();
             db.CompletedOrderDays.Add(new()
@@ -215,7 +221,8 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
 
     private static OrderDetails Details(PizzaOrder o) => new()
     {
-        Id = o.Id, RestaurantId = o.RestaurantId!.Value, MenuItemId = o.MenuItemId!.Value,
+        Id = o.Id, RestaurantId = o.RestaurantId!.Value, MenuItemId = o.MenuItemId ?? 0,
+        DrinkOnly = o.MenuItemId == null && o.Drink != null,
         OwnerUserId = o.OwnerUserId,
         UnitPrice = o.UnitPrice, CanCollect = o.CanCollect,
         OrderDate = o.OrderDate!.Value, Pizza = o.Pizza, Name = o.Name, Comment = o.Comment,

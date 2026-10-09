@@ -339,10 +339,9 @@ public class HomeTests : TestContext
         Assert.DoesNotContain("portioner × 95 kr", page.Markup);
         Assert.Contains("Pantvärde", page.Markup);
         Assert.Contains("100 kr", page.Find(".stat-card:last-child").TextContent);
-        Assert.Contains("50 burkar × 2 kr i pant", page.Find(".stat-card:last-child").TextContent);
-        Assert.Contains("Topp 5 maträtter", page.Markup);
+        Assert.Contains("Topp 5 beställda pizzor", page.Markup);
         Assert.Contains("Dryckernas topplista", page.Markup);
-        Assert.Contains("Våra pizzahjältar", page.Markup);
+        Assert.Contains("De där som hämtar", page.Markup);
         Assert.Equal(3, page.FindAll(".ranking").Count);
         page.Find("#statistics-period").Change("2026");
         page.WaitForAssertion(() => Assert.Equal(2026, fake.LastYear));
@@ -359,6 +358,29 @@ public class HomeTests : TestContext
         fake.Fail = false;
         page.Find("button").Click();
         page.WaitForAssertion(() => Assert.Equal(4, page.FindAll(".stat-card").Count));
+    }
+
+    [Fact]
+    public void Standalone_drink_has_no_sauce_and_saves_quantity_and_can_switch_to_food()
+    {
+        Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/pizzerian");
+        var page = RenderComponent<Home>();
+        page.Find("[data-action='drink-only']").Click();
+        Assert.Contains("15 kr per burk", page.Find("#selection-heading").TextContent);
+        Assert.Empty(page.FindAll("#sauce"));
+        page.Find("#drink").Change("Fanta 33cl");
+        page.Find("#quantity").Change("2");
+        page.Find("form").Submit();
+        page.WaitForAssertion(() => Assert.True(orders.Saved?.DrinkOnly));
+        Assert.Equal(2, orders.Saved!.Quantity);
+        Assert.Equal(0, orders.Saved.MenuItemId);
+        Assert.Null(orders.Saved.Sauce);
+        page.Find("[data-action='drink-only']").Click();
+        page.Find("[data-menu-item='2']").Click();
+        Assert.Single(page.FindAll("#sauce"));
+        page.Find("#drink").Change("Fanta 33cl");
+        page.Find("form").Submit();
+        Assert.False(orders.Saved.DrinkOnly);
     }
 
     private class FakeStatistics : IStatisticsApiService

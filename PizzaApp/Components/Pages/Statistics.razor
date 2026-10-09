@@ -35,8 +35,8 @@ else
         {
             <div class="stat-cards">
                 <article class="stat-card"><h2>🍕 Beställda pizzor</h2><strong>@Number(data.TotalMeals)</strong></article>
-                <article class="stat-card"><h2>💰 Totalt beställningsvärde</h2><strong>@Number(data.TotalOrderValue) kr</strong></article>
-                <article class="stat-card"><h2>🥤 Drycker tillsammans</h2><strong>@Number(data.TotalDrinks)</strong></article>
+                <article class="stat-card"><h2>💰 Totalt beställningsvärde</h2><strong>@Number(data.TotalOrderValue) kr</strong>@if (data.ExtraDrinks > 0) { <p>Varav @Number(data.ExtraDrinkValue) kr för extra dryck</p> }</article>
+                <article class="stat-card"><h2>🥤 Drycker tillsammans</h2><strong>@Number(data.TotalDrinks)</strong>@if (data.ExtraDrinks > 0) { <p>@Number(data.ExtraDrinks) beställda separat à 15 kr</p> }</article>
                 <article class="stat-card"><h2>♻️ Pantvärde</h2><strong>@Number(data.TotalDrinks * 2m) kr</strong></article>
             </div>
             @if (data.CompletedDays == 0)

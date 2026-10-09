@@ -12,6 +12,33 @@ namespace PizzaApp.Tests;
 public class StatisticsTests
 {
     [Fact]
+    public async Task Mixed_food_and_standalone_drinks_count_separate_prices_and_all_cans()
+    {
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        using var db = new PizzaDbContext(new DbContextOptionsBuilder<PizzaDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        db.CompletedOrderDays.Add(new()
+        {
+            RestaurantId = 1, IsPizzeria = true, Date = new(2026, 10, 2),
+            OrdersJson = JsonSerializer.Serialize(new OrderDetails[]
+            {
+                new() { Pizza = "Sallad", Quantity = 2, Drink = "Fanta 33cl" },
+                new() { Pizza = "Enbart dryck", DrinkOnly = true, Quantity = 3, Drink = "Fanta 33cl", UnitPrice = 15 }
+            })
+        });
+        await db.SaveChangesAsync();
+        var result = await new StatisticsService(db, Options.Create(new StatisticsOptions())).GetAsync();
+        Assert.Equal(2, result.TotalMeals);
+        Assert.Equal(3, result.ExtraDrinks);
+        Assert.Equal(5, result.TotalDrinks);
+        Assert.Equal(235m, result.TotalOrderValue);
+        Assert.Equal(45m, result.ExtraDrinkValue);
+        Assert.Equal(new RankedCount("Sallad", 2), Assert.Single(result.TopPizzas));
+        Assert.Equal(new RankedCount("Fanta 33cl", 5), Assert.Single(result.Drinks));
+    }
+
+    [Fact]
     public async Task Real_collections_survive_days_whose_orders_have_test_drinks()
     {
         using var connection = new SqliteConnection("Data Source=:memory:");

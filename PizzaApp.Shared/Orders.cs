@@ -28,7 +28,8 @@ public static class MenuSauce
 
 public class OrderInput
 {
-    [Range(1, int.MaxValue)] public int MenuItemId { get; set; }
+    [Range(0, int.MaxValue)] public int MenuItemId { get; set; }
+    public bool DrinkOnly { get; set; }
     [Range(1, 99, ErrorMessage = "Ange mellan 1 och 99 portioner.")]
     public int Quantity { get; set; } = 1;
     // Retained for older clients and response DTOs; the server uses the profile

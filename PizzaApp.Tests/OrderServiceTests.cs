@@ -35,6 +35,49 @@ public class OrderServiceTests : IDisposable
     { MenuItemId = 2, Quantity = quantity, Sauce = sauce, Drink = "Coca-Cola 33cl" };
 
     [Fact]
+    public async Task Standalone_drink_can_be_created_changed_and_completed_with_fifteen_kronor_price()
+    {
+        var drink = await service.SaveAsync(1, new() { DrinkOnly = true, Drink = "Fanta 33cl", Quantity = 2 });
+        Assert.True(drink.DrinkOnly);
+        Assert.Equal(0, drink.MenuItemId);
+        Assert.Null(drink.Sauce);
+        Assert.Equal(15m, drink.UnitPrice);
+        Assert.Null((await db.Orders.SingleAsync()).MenuItemId);
+        var meal = Pizza(); meal.Revision = drink.Revision;
+        var changed = await service.SaveAsync(1, meal, drink.Id);
+        Assert.False(changed.DrinkOnly);
+        drink = await service.SaveAsync(1, new() { DrinkOnly = true, Drink = "Pepsi Max 33cl", Quantity = 3, Revision = changed.Revision }, changed.Id);
+        Assert.Equal(15m, drink.UnitPrice);
+        var day = await service.SetCollectorAsync(1, drink.Id, new(true, drink.Revision, drink.OrderDate));
+        await service.CompleteAsync(1, new(day.Date, day.Orders.ToDictionary(o => o.Id, o => o.Revision)));
+        var history = System.Text.Json.JsonSerializer.Deserialize<List<OrderDetails>>((await db.CompletedOrderDays.SingleAsync()).OrdersJson)!;
+        Assert.True(Assert.Single(history).DrinkOnly);
+        Assert.Equal("Dryck", history[0].Category);
+        var stats = await new StatisticsService(db, Options.Create(new StatisticsOptions())).GetAsync();
+        Assert.Equal(0, stats.TotalMeals);
+        Assert.Equal(3, stats.ExtraDrinks);
+        Assert.Equal(3, stats.TotalDrinks);
+        Assert.Equal(45m, stats.TotalOrderValue);
+        Assert.Empty(stats.TopPizzas);
+        Assert.Single(stats.Collectors);
+    }
+
+    [Fact]
+    public async Task Standalone_drink_rejects_wrong_restaurant_food_sauce_and_unknown_drink()
+    {
+        foreach (var input in new OrderInput[]
+        {
+            new() { DrinkOnly = true },
+            new() { DrinkOnly = true, Drink = "Unknown" },
+            new() { DrinkOnly = true, Drink = "Fanta 33cl", MenuItemId = 2 },
+            new() { DrinkOnly = true, Drink = "Fanta 33cl", Sauce = "Ingen sås" }
+        }) Assert.Equal(400, (await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(1, input))).StatusCode);
+        Assert.Equal(400, (await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(2,
+            new() { DrinkOnly = true, Drink = "Fanta 33cl" }))).StatusCode);
+        Assert.Empty(await db.Orders.ToListAsync());
+    }
+
+    [Fact]
     public async Task Collector_choice_does_not_change_another_account_with_the_same_name()
     {
         actor.IsAdmin = false;

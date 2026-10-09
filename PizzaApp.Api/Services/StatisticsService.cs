@@ -25,6 +25,7 @@ public class StatisticsService(PizzaDbContext db, IOptions<StatisticsOptions> op
             .Where(d => d.Orders.Count > 0).ToList();
         var days = cleanHistory.Where(d => !year.HasValue || d.Day.Date.Year == year).ToList();
         var orders = days.SelectMany(d => d.Orders).ToList();
+        var meals = orders.Where(o => !o.DrinkOnly).ToList();
         var drinks = orders.Where(o => PizzaChoices.Drinks.Contains(o.Drink, StringComparer.Ordinal)).ToList();
         return new()
         {
@@ -32,11 +33,12 @@ public class StatisticsService(PizzaDbContext db, IOptions<StatisticsOptions> op
             StartDate = settings.StartDate,
             AvailableYears = cleanHistory.Select(d => d.Day.Date.Year).Distinct().OrderDescending().ToList(),
             Since = cleanHistory.Count == 0 ? null : cleanHistory[0].Day.Date,
-            TotalPizzas = orders.Sum(o => o.Quantity),
-            TotalMeals = orders.Sum(o => o.Quantity),
+            TotalPizzas = meals.Sum(o => o.Quantity),
+            TotalMeals = meals.Sum(o => o.Quantity),
+            ExtraDrinks = orders.Where(o => o.DrinkOnly).Sum(o => o.Quantity),
             TotalDrinks = drinks.Sum(o => o.Quantity),
             CompletedDays = days.Count,
-            TopPizzas = Rank(orders.Select(o => new RankedCount(o.Pizza, o.Quantity))).Take(5).ToList(),
+            TopPizzas = Rank(meals.Select(o => new RankedCount(o.Pizza, o.Quantity))).Take(5).ToList(),
             Drinks = Rank(drinks
                 .Select(o => new RankedCount(o.Drink!, o.Quantity))),
             // Collectors are an independent record of who fetched the food.

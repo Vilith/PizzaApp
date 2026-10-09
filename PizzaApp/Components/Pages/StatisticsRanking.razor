@@ -1,0 +1,24 @@
+<section class="ranking" aria-label="@Title">
+    <h2>@Title</h2>
+    @if (Items.Count == 0) { <p>@EmptyText</p> }
+    else
+    {
+        <ol>
+            @foreach (var item in Items)
+            {
+                <li><div class="ranking-label"><strong>@item.Name</strong><span>@item.Count @Unit</span></div>
+                    <div class="bar-track" aria-hidden="true"><div class="bar" style="width: @Width(item.Count)%"></div></div>
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public List<RankedCount> Items { get; set; } = [];
+    [Parameter] public string Unit { get; set; } = "st";
+    [Parameter] public string EmptyText { get; set; } = "Inga uppgifter ännu.";
+    private string Width(int count) => (Items.Max(i => i.Count) > 0 ? 100m * count / Items.Max(i => i.Count) : 0)
+        .ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+}

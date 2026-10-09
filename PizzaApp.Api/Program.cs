@@ -22,6 +22,8 @@ namespace PizzaApp.Api
             builder.Services.AddSingleton(TimeProvider.System);
             builder.Services.Configure<OrderingOptions>(builder.Configuration.GetSection("Ordering"));
             builder.Services.AddScoped<OrderService>();
+            builder.Services.AddScoped<StatisticsService>();
+            builder.Services.Configure<StatisticsOptions>(builder.Configuration.GetSection("Statistics"));
             builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection("Supabase"));
             builder.Services.AddScoped<RegistrationService>();
             builder.Services.AddHttpClient("SupabaseRegistration", client => client.Timeout = TimeSpan.FromSeconds(20))

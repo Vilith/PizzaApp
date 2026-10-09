@@ -1,4 +1,9 @@
 h1 { font-size: clamp(27px, 3.5vw, 38px); font-weight: 750; letter-spacing: -.8px; margin-bottom: 12px; }
+.statistics-teaser { display: block; width: fit-content; max-width: 100%; margin: 24px auto 0; padding: 10px 16px; border: 1px solid #d9c8a7; border-radius: 999px; background: linear-gradient(110deg, #fffaf0, #f4dfad, #e6ead5, #fffaf0); background-size: 300% 100%; color: #173b35; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; animation: statistics-glow 6s ease-in-out infinite; }
+.statistics-teaser:hover { color: #173b35; border-color: #96713e; }
+.statistics-teaser:focus-visible { outline: 3px solid #f4dfad; outline-offset: 4px; }
+@keyframes statistics-glow { 0%, 100% { background-position: 0% 50%; box-shadow: 0 0 0 0 #f4dfad00; } 50% { background-position: 100% 50%; box-shadow: 0 0 14px 2px #f4dfad40; } }
+@media (prefers-reduced-motion: reduce) { .statistics-teaser { animation: none; background-position: 50% 50%; } }
 h2 { font-size: 23px; font-weight: 700; margin-bottom: 20px; }
 h3 { font-size: 18px; font-weight: 700; }
 .eyebrow { font-size: 11px; font-weight: 750; letter-spacing: 1.7px; color: #52749a; text-transform: uppercase; margin: 0 0 8px; }

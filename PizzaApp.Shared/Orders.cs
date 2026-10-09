@@ -45,6 +45,7 @@ public class OrderInput
 
 public class OrderDetails : OrderInput
 {
+    public string? Category { get; set; }
     public string? AvatarDataUrl { get; set; }
     public Guid? OwnerUserId { get; set; }
     public decimal? UnitPrice { get; set; }

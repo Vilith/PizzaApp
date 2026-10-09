@@ -174,12 +174,20 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             var collectors = orders.Where(o => o.CanCollect && !string.IsNullOrWhiteSpace(o.Name))
                 .Select(o => o.Name).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(n => n).ToList();
             if (collectors.Count == 0) throw new OrderException(400, "Markera minst en person som hämtat beställningen.");
+            var categories = await db.MenuItems.AsNoTracking().Where(m => m.RestaurantId == restaurantId)
+                .ToDictionaryAsync(m => m.Id, m => m.Category);
+            var snapshot = orders.Select(o =>
+            {
+                var details = Details(o);
+                details.Category = categories.GetValueOrDefault(details.MenuItemId);
+                return details;
+            }).ToList();
             db.CompletedOrderDays.Add(new()
             {
                 RestaurantId = restaurantId, Date = date, RestaurantName = restaurant.Name,
                 IsPizzeria = restaurant.IsPizzeria, CollectedAt = clock.GetUtcNow().UtcDateTime,
                 CollectorsJson = JsonSerializer.Serialize(collectors),
-                OrdersJson = JsonSerializer.Serialize(orders.Select(Details).ToList())
+                OrdersJson = JsonSerializer.Serialize(snapshot)
             });
             await PersistAsync();
         }

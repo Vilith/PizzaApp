@@ -18,6 +18,24 @@ namespace PizzaApp.Tests;
 public class OrdersApiTests
 {
     [Fact]
+    public async Task Statistics_client_reads_completed_pizzeria_history_and_requires_login()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        var orders = new PizzaApp.Services.OrderApiService(client);
+        var created = await orders.SaveAsync(1, Pizza());
+        var selected = await orders.SetCollectorAsync(1, created.Id, new(true, created.Revision, created.OrderDate));
+        await orders.CompleteAsync(1, new(selected.Date, selected.Orders.ToDictionary(o => o.Id, o => o.Revision)));
+        var statistics = new PizzaApp.Services.StatisticsApiService(client);
+        var result = await statistics.GetAsync(2026);
+        Assert.Equal(1, result.TotalPizzas);
+        Assert.Equal(95m, result.TotalOrderValue);
+        Assert.Single(result.Collectors);
+        Assert.Equal(0, (await statistics.GetAsync(2025)).TotalPizzas);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/statistics/pizzeria?year=0")).StatusCode);
+        client.DefaultRequestHeaders.Authorization = null;
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/statistics/pizzeria")).StatusCode);
+    }
+    [Fact]
     public async Task Client_service_uses_restaurant_routes_and_surfaces_deadline_errors()
     {
         using var app = new TestApp(); using var client = app.CreateClient();
@@ -208,6 +226,8 @@ public class OrdersApiTests
                 services.AddDbContext<PizzaDbContext>(o => o.UseSqlite(connection));
                 services.AddSingleton<TimeProvider>(new FixedClock());
                 services.Configure<OrderingOptions>(o => o.LockAfterDeadline = locked);
+                // This fixture's clock predates production use; keep its synthetic history visible.
+                services.Configure<StatisticsOptions>(o => o.StartDate = null);
             });
         }
         protected override IHost CreateHost(IHostBuilder builder)

@@ -23,6 +23,7 @@ public class HomeTests : TestContext
         Services.AddSingleton<IAuthService>(auth);
         Services.AddSingleton<IOrderApiService>(orders);
         Services.AddSingleton<IRestaurantApiService>(new FakeRestaurants());
+        Services.AddSingleton<IStatisticsApiService>(new FakeStatistics());
     }
 
     [Fact]
@@ -33,6 +34,8 @@ public class HomeTests : TestContext
         Assert.Contains("Pizza", page.Find("[data-restaurant='1']").TextContent);
         Assert.Contains("Sperring", page.Find("[data-restaurant='2']").TextContent);
         Assert.Empty(page.FindAll("#daily-list, .menu-list"));
+        Assert.Equal("🍕 Kika på lite statistik -->", page.Find(".statistics-teaser").TextContent);
+        Assert.Equal("/statistics", page.Find(".statistics-teaser").GetAttribute("href"));
         page.Find("[data-restaurant='1']").Click();
         Assert.Contains(JSInterop.Invocations, call => call.Identifier == "pizzaEntrance.play" && Equals(call.Arguments[0], "Pizza"));
         Assert.EndsWith("/pizzerian", Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri);
@@ -324,6 +327,54 @@ public class HomeTests : TestContext
         public Task<SperringPage> GetAsync() => Task.FromResult(new SperringPage(2,
             [new() { Slot = 1, Year = 2026, Week = 39 }, new() { Slot = 2, Year = 2026, Week = 40 }], []));
         public Task SaveAsync(SperringMenu menu) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public void Statistics_page_shows_rankings_and_changes_period()
+    {
+        var fake = new FakeStatistics();
+        Services.AddSingleton<IStatisticsApiService>(fake);
+        var page = RenderComponent<Statistics>();
+        Assert.Contains("Totalt beställningsvärde", page.Markup);
+        Assert.DoesNotContain("portioner × 95 kr", page.Markup);
+        Assert.Contains("Pantvärde", page.Markup);
+        Assert.Contains("100 kr", page.Find(".stat-card:last-child").TextContent);
+        Assert.Contains("50 burkar × 2 kr i pant", page.Find(".stat-card:last-child").TextContent);
+        Assert.Contains("Topp 5 maträtter", page.Markup);
+        Assert.Contains("Dryckernas topplista", page.Markup);
+        Assert.Contains("Våra pizzahjältar", page.Markup);
+        Assert.Equal(3, page.FindAll(".ranking").Count);
+        page.Find("#statistics-period").Change("2026");
+        page.WaitForAssertion(() => Assert.Equal(2026, fake.LastYear));
+        Assert.Equal("2026", page.Find("#statistics-period").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void Statistics_page_offers_retry_when_connection_fails()
+    {
+        var fake = new FakeStatistics { Fail = true };
+        Services.AddSingleton<IStatisticsApiService>(fake);
+        var page = RenderComponent<Statistics>();
+        Assert.Contains("Kunde inte hämta statistiken", page.Find("[role='alert']").TextContent);
+        fake.Fail = false;
+        page.Find("button").Click();
+        page.WaitForAssertion(() => Assert.Equal(4, page.FindAll(".stat-card").Count));
+    }
+
+    private class FakeStatistics : IStatisticsApiService
+    {
+        public bool Fail { get; set; }
+        public int? LastYear { get; private set; }
+        public Task<PizzeriaStatistics> GetAsync(int? year = null)
+        {
+            LastYear = year;
+            if (Fail) throw new HttpRequestException("Offline");
+            return Task.FromResult(new PizzeriaStatistics
+            {
+                Year = year, StartDate = new(2026, 10, 2), AvailableYears = [2026], TotalPizzas = 42, TotalMeals = 50, TotalDrinks = 50, CompletedDays = 4,
+                TopPizzas = [new("Vesuvio", 42)], Drinks = [new("Cola", 50)], Collectors = [new("Anna", 4)]
+            });
+        }
     }
 
     private class FakeRestaurants : IRestaurantApiService

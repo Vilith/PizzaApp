@@ -1,0 +1,92 @@
+@page "/statistics"
+@inject IStatisticsApiService StatisticsApi
+@inject IAuthService Auth
+@implements IDisposable
+
+<PageTitle>Pizzastatistik · PizzaApp</PageTitle>
+
+@if (Auth.User == null)
+{
+    <Login />
+}
+else if (Auth.User.MustChangePassword || string.IsNullOrWhiteSpace(Auth.User.DisplayName))
+{
+    <ProfileSettings />
+}
+else
+{
+    <section class="statistics" aria-labelledby="statistics-heading">
+        <div class="statistics-heading">
+            <h1 id="statistics-heading">Pizzastatistik 🍕</h1>
+            <div class="period"><label for="statistics-period">Period</label>
+                <select id="statistics-period" class="form-select" value="@year" @onchange="ChangePeriod" disabled="@loading">
+                    <option value="">@(data?.StartDate is { } start ? $"Sedan starten ({start.ToString("d/M-yy", System.Globalization.CultureInfo.InvariantCulture)})" : "Sedan starten")</option>
+                    @foreach (var availableYear in data?.AvailableYears ?? [])
+                    { <option value="@availableYear">@availableYear</option> }
+                </select>
+            </div>
+        </div>
+        @if (loading) { <p class="notice" role="status">Laddar pizzahistoriken…</p> }
+        else if (error != null)
+        {
+            <div class="notice" role="alert"><p>@error</p><button class="btn btn-primary" @onclick="Load">Försök igen</button></div>
+        }
+        else if (data != null)
+        {
+            <div class="stat-cards">
+                <article class="stat-card"><h2>🍕 Beställda pizzor</h2><strong>@Number(data.TotalMeals)</strong></article>
+                <article class="stat-card"><h2>💰 Totalt beställningsvärde</h2><strong>@Number(data.TotalOrderValue) kr</strong></article>
+                <article class="stat-card"><h2>🥤 Drycker tillsammans</h2><strong>@Number(data.TotalDrinks)</strong></article>
+                <article class="stat-card"><h2>♻️ Pantvärde</h2><strong>@Number(data.TotalDrinks * 2m) kr</strong></article>
+            </div>
+            @if (data.CompletedDays == 0)
+            {
+                <p class="notice">Ingen avslutad beställning under perioden ännu. Statistiken börjar räknas när dagens beställning markeras som hämtad.</p>
+            }
+            else
+            {
+                <div class="rankings">
+                    <StatisticsRanking Title="Topp 5 beställda pizzor" Items="data.TopPizzas" Unit="st" EmptyText="Inga maträtter beställdes under perioden." />
+                    <StatisticsRanking Title="Dryckernas topplista" Items="data.Drinks" Unit="st" EmptyText="Inga drycker finns registrerade under perioden." />
+                    <StatisticsRanking Title="De där som hämtar" Items="data.Collectors" Unit="hämtningsdagar" EmptyText="Inga hämtare finns registrerade under perioden." />
+                </div>
+            }
+        }
+    </section>
+}
+
+@code {
+    private PizzeriaStatistics? data;
+    private int? year;
+    private bool loading;
+    private string? error;
+    private int version;
+    private static string Number(decimal value) => value.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("sv-SE"));
+
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.Changed += AuthChanged;
+        await Load();
+    }
+    private void AuthChanged() => _ = InvokeAsync(async () => { data = null; await Load(); StateHasChanged(); });
+    private async Task ChangePeriod(ChangeEventArgs args)
+    {
+        year = int.TryParse(args.Value?.ToString(), out var selected) ? selected : null;
+        await Load();
+    }
+    private async Task Load()
+    {
+        var request = ++version;
+        if (Auth.User is not { MustChangePassword: false, DisplayName.Length: > 0 }) { loading = false; return; }
+        loading = true; error = null;
+        try
+        {
+            var result = await StatisticsApi.GetAsync(year);
+            if (request == version) data = result;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        { if (request == version) error = "Kunde inte hämta statistiken. Kontrollera anslutningen och försök igen."; }
+        finally { if (request == version) loading = false; }
+    }
+    public void Dispose() { ++version; Auth.Changed -= AuthChanged; }
+}

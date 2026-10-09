@@ -16,6 +16,7 @@
                 <span>@user.DisplayName</span>
             </span>
             <div class="nav-actions">
+                <a href="/statistics" class="nav-action" data-action="statistics">🍕-Statistik</a>
                 <a href="/settings" class="nav-action" data-action="settings">Inställningar</a>
                 <button class="nav-action" data-action="logout" disabled="@signingOut" @onclick="SignOut">@(signingOut ? "Loggar ut…" : "Logga ut")</button>
             </div>

@@ -1,0 +1,10 @@
+.ranking { background: #fffaf0; border: 1px solid #d9c8a7; border-radius: 14px; padding: 24px; height: 100%; }
+h2 { font-size: 21px; color: #173b35; margin-bottom: 24px; }
+ol { margin: 0; padding-left: 24px; }
+li { padding-left: 6px; margin-bottom: 20px; color: #173b35; }
+li::marker { font-weight: 700; color: #96713e; }
+.ranking-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; margin-bottom: 8px; }
+.ranking-label strong { overflow-wrap: anywhere; }
+.ranking-label span { font-size: 14px; color: #586b61; }
+.bar-track { height: 7px; border-radius: 5px; background: #e9e1d1; overflow: hidden; }
+.bar { height: 100%; background: #337465; border-radius: 5px; }

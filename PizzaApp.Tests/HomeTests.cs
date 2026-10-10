@@ -27,6 +27,28 @@ public class HomeTests : TestContext
     }
 
     [Fact]
+    public void Call_in_summary_combines_pizza_and_sauce_regardless_of_person_or_drink()
+    {
+        orders.Existing.Pizza = "Tre Kronor";
+        orders.Existing.Sauce = "Kebabsås (Stark)";
+        orders.ExtraOrders = [
+            new() { Id = 2, MenuItemId = 2, Pizza = "Tre Kronor", Sauce = "Kebabsås (Stark)", Drink = "Fanta 33cl", Name = "Anna", Quantity = 1 },
+            new() { Id = 3, MenuItemId = 2, Pizza = "Tre Kronor", Sauce = "Kebabsås (Mixad)", Quantity = 1 },
+            new() { Id = 4, MenuItemId = 2, Pizza = "Tre Kronor", Sauce = "Kebabsås (Stark)", Comment = "Utan lök", Quantity = 2 },
+            new() { Id = 5, Pizza = "Enbart dryck", DrinkOnly = true, Drink = "Fanta 33cl", Quantity = 3 }
+        ];
+        Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/pizzerian");
+        var page = RenderComponent<Home>();
+        var summary = page.Find("[data-list='food-summary']");
+        Assert.Equal(3, summary.QuerySelectorAll(".order-row").Length);
+        Assert.Contains("2x Tre Kronor Kebabsås (Stark)", summary.TextContent);
+        Assert.Contains("1x Tre Kronor Kebabsås (Mixad)", summary.TextContent);
+        Assert.Contains("Utan lök", summary.TextContent);
+        Assert.DoesNotContain("Fanta", summary.TextContent);
+        Assert.Equal(5, page.FindAll("details:not([data-list]) [data-edit]").Count);
+    }
+
+    [Fact]
     public void Landing_page_has_two_choices_and_no_order_list()
     {
         var page = RenderComponent<Home>();
@@ -190,7 +212,7 @@ public class HomeTests : TestContext
         var page = RenderComponent<Home>();
         page.Find("[data-restaurant='1']").Click();
         Assert.Contains("3 × Coca-Cola 33cl", page.Find("[data-list='drinks']").TextContent);
-        Assert.DoesNotContain("Vesuvio", page.Find(".summary-box").TextContent);
+        Assert.Contains("3x Vesuvio Ingen sås", page.Find("[data-list='food-summary']").TextContent);
         Assert.True(page.Find("[data-action='complete']").HasAttribute("disabled"));
         page.Find("[data-collector='1']").Change(true);
         page.Find("[data-action='complete']").Click();
@@ -426,10 +448,11 @@ public class HomeTests : TestContext
         public int? UpdatedId;
         public (int, int, Guid)? Deleted;
         public OrderDetails Existing = new() { Id = 1, RestaurantId = 1, MenuItemId = 2, Pizza = "Vesuvio", Sauce = "Ingen sås", Drink = "Coca-Cola 33cl", Revision = Guid.NewGuid() };
+        public List<OrderDetails> ExtraOrders = [];
         public Task<DailyOrderList> GetTodayAsync(int id) => Task.FromResult(new DailyOrderList
         { Date = new(2026, 9, 22), IsPizzeria = id == 1, IsLocked = Locked || Completed,
           CollectedAt = Completed ? DateTime.UtcNow : null, CollectedBy = Completed ? [Existing.Name] : [],
-          Orders = id == 1 ? [Existing] : [] });
+          Orders = id == 1 ? [Existing, .. ExtraOrders] : [] });
         public Task<OrderDetails> SaveAsync(int restaurantId, OrderInput input, int? id = null)
         {
             if (FailSave) throw new HttpRequestException("Offline");

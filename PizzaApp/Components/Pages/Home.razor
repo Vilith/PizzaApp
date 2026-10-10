@@ -195,7 +195,20 @@ else if (restaurant != null)
             else
             {
                 <div class="summary-box">
-                    <h3>Att ringa in</h3><p>Kryssa i de som kan hämta. Låt bara de som faktiskt hämtade vara ikryssade när dagen avslutas.</p>
+                    <h3>Att ringa in</h3>
+                    <div data-list="food-summary">
+                        @foreach (var group in daily.Orders.Where(o => !o.DrinkOnly)
+                            .GroupBy(o => new { o.MenuItemId, o.Pizza, o.Sauce, o.Comment })
+                            .OrderBy(g => g.Key.Pizza).ThenBy(g => g.Key.Sauce).ThenBy(g => g.Key.Comment))
+                        {
+                            <div class="order-row">
+                                <div><strong>@(group.Sum(o => o.Quantity))x @group.Key.Pizza @group.Key.Sauce</strong>
+                                    @if (!string.IsNullOrWhiteSpace(group.Key.Comment)) { <span class="order-comment">@group.Key.Comment</span> }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <h3>Vilka kan hämta?</h3><p>Kryssa i de som kan hämta. Låt bara de som faktiskt hämtade vara ikryssade när dagen avslutas.</p>
                     @foreach (var person in daily.Orders.GroupBy(o => new { o.OwnerUserId, Name = o.Name.ToUpperInvariant() }).OrderBy(g => g.Key.Name))
                     {
                         var representative = person.First();

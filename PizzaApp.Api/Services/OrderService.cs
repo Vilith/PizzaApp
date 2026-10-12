@@ -28,10 +28,15 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             throw new OrderException(409, "Beställningarna är låsta efter kl. 11:15. Uppdatera listan.");
     }
 
-    public async Task<DailyOrderList> GetTodayAsync(int restaurantId)
+    public Task<DailyOrderList> GetTodayAsync(int restaurantId) => GetDayAsync(restaurantId);
+
+    public async Task<DailyOrderList> GetDayAsync(int restaurantId, DateOnly? requested = null)
     {
         var restaurant = await RestaurantAsync(restaurantId);
-        var (date, passed) = CurrentDay();
+        var (today, passed) = CurrentDay();
+        var date = requested ?? today;
+        if (date != today && restaurant.Name != "Sperring")
+            throw new OrderException(400, "Endast Sperring har beställningar per datum.");
         var completed = await db.CompletedOrderDays.AsNoTracking().SingleOrDefaultAsync(d => d.RestaurantId == restaurantId && d.Date == date);
         var orders = await db.Orders.AsNoTracking()
             .Where(o => o.RestaurantId == restaurantId && o.OrderDate == date)
@@ -64,7 +69,10 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         await using var transaction = await db.Database.BeginTransactionAsync();
         await LockRestaurantAsync(restaurantId);
         var restaurant = await RestaurantAsync(restaurantId);
-        var (date, passed) = CurrentDay();
+        var (today, passed) = CurrentDay();
+        var date = input.DeliveryDate ?? today;
+        if (date < today || (date != today && restaurant.Name != "Sperring"))
+            throw new OrderException(400, "Välj dagens datum eller en kommande vardag på Sperringmenyn.");
         await CheckCompletedAsync(restaurantId, date);
         CheckDeadline(restaurant, passed);
         var errors = new List<ValidationResult>();
@@ -86,10 +94,21 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         if (restaurant.Name == "Sperring")
         {
             var weeks = await db.SperringWeeks.AsNoTracking().ToListAsync();
-            var available = weeks.Select(w => JsonSerializer.Deserialize<SperringMenu>(w.MenuJson)!)
+            var regular = weeks.SingleOrDefault(w => w.Id == 0);
+            var regularDishes = regular == null ? null : JsonSerializer.Deserialize<SperringMenu>(regular.MenuJson)!.RegularDishes;
+            var menus = Enumerable.Range(1, 2).Select(slot =>
+            {
+                var row = weeks.SingleOrDefault(w => w.Id == slot);
+                var other = weeks.FirstOrDefault(w => w.Id is 1 or 2);
+                var day = other == null ? today.AddDays((slot - 1) * 7).ToDateTime(TimeOnly.MinValue) : JsonSerializer.Deserialize<SperringMenu>(other.MenuJson)!.Monday.AddDays((slot - other.Id) * 7).ToDateTime(TimeOnly.MinValue);
+                var menu = row == null ? new SperringMenu { Year = System.Globalization.ISOWeek.GetYear(day), Week = System.Globalization.ISOWeek.GetWeekOfYear(day) } : JsonSerializer.Deserialize<SperringMenu>(row.MenuJson)!;
+                menu.RegularDishes = regularDishes ?? (weeks.FirstOrDefault(w => w.Id == 1) is { } first ? JsonSerializer.Deserialize<SperringMenu>(first.MenuJson)!.RegularDishes : "");
+                return menu;
+            });
+            var available = menus
                 .Where(w => date >= w.Monday && date <= w.Monday.AddDays(4))
                 .Any(w => w.Dishes(date.DayNumber - w.Monday.DayNumber).Contains(item!.Name, StringComparer.OrdinalIgnoreCase));
-            if (!available) throw new OrderException(400, "Rätten finns inte på dagens Sperringmeny. Uppdatera sidan.");
+            if (!available) throw new OrderException(400, "Rätten finns inte på Sperringmenyn för valt datum. Uppdatera sidan.");
         }
         if (item is { IsHidden: true } && (!id.HasValue || order.MenuItemId != item.Id))
             throw new OrderException(400, "Rätten har utgått från menyn.");
@@ -120,7 +139,11 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         await using var transaction = await db.Database.BeginTransactionAsync();
         await LockRestaurantAsync(restaurantId);
         var restaurant = await RestaurantAsync(restaurantId);
-        var (date, passed) = CurrentDay();
+        var (today, passed) = CurrentDay();
+        var date = restaurant.Name == "Sperring"
+            ? await db.Orders.Where(o => o.Id == id && o.RestaurantId == restaurantId).Select(o => o.OrderDate).SingleOrDefaultAsync() ?? today
+            : today;
+        if (date < today) throw new OrderException(409, "Tidigare dagars beställningar kan inte ändras.");
         await CheckCompletedAsync(restaurantId, date);
         CheckDeadline(restaurant, passed);
         var order = await EditableAsync(restaurantId, id, date, revision);

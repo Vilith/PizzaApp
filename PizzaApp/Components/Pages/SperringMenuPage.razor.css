@@ -329,3 +329,20 @@ small {
     } 
 
 }
+.day-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 20px 28px 0; }
+.day-tabs .active { background: #36563d; color: white; border-color: #36563d; }
+.minimum { padding: 16px; background: #fff0d6; border-radius: 8px; color: #6b4717; }
+.minimum.reached { background: #e4eddc; color: #29442f; }
+.current-week { text-align: center; font-size: 1.2rem; font-weight: 700; }
+.day-tabs { justify-content: center; }
+.regular-editor { padding: 24px 28px; margin-bottom: 28px; background: #fffdf8; border: 1px solid #d5ddcf; border-radius: 16px; }
+.regular-dish-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; margin: 6px 0; }
+.regular-dish-row input { margin: 0; min-width: 0; }
+.day-menu { min-width: 0; }
+.dish-group-label { margin: 0 0 8px; font-size: .8rem; font-weight: 700; color: #627167; }
+.daily-dishes .dishes { flex-direction: column; }
+.daily-dishes .dish { width: 100%; text-align: left; font-size: 1.1rem; font-weight: 650; line-height: 1.6; padding: 14px 16px; white-space: normal; overflow-wrap: anywhere; background: #f1f3e8; border-color: #bcccb2; }
+.daily-dishes .dish.selected { background: #dde9d5; border-color: #37543c; }
+.daily-dishes .dish.static { color: #243c35; }
+.regular-dishes { margin-top: 18px; padding-top: 14px; border-top: 1px solid #e2e6dc; }
+.regular-dishes .dish { line-height: 1.5; text-align: left; white-space: normal; overflow-wrap: anywhere; }

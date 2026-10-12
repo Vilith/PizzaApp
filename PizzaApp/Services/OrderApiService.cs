@@ -25,6 +25,13 @@ public class OrderApiService(HttpClient httpClient) : IOrderApiService
         return await response.Content.ReadFromJsonAsync<DailyOrderList>() ?? throw new HttpRequestException("Servern returnerade ingen lista.");
     }
 
+    public async Task<DailyOrderList> GetDayAsync(int restaurantId, DateOnly date)
+    {
+        using var response = await httpClient.GetAsync($"{Url(restaurantId)}?date={date:yyyy-MM-dd}");
+        await EnsureSuccess(response);
+        return await response.Content.ReadFromJsonAsync<DailyOrderList>() ?? throw new HttpRequestException("Servern returnerade ingen beställningslista.");
+    }
+
     public async Task<DailyOrderList> GetTodayAsync(int restaurantId)
     {
         using var response = await httpClient.GetAsync(Url(restaurantId));

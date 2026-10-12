@@ -31,6 +31,65 @@ public class OrderServiceTests : IDisposable
         service = new(db, clock, Options.Create(settings), actor);
     }
 
+    [Fact]
+    public async Task Sperring_future_orders_are_separate_and_can_be_deleted()
+    {
+        var friday = new DateOnly(2026, 9, 25);
+        var saved = await service.SaveAsync(2, new() { MenuItemId = 100, DeliveryDate = friday });
+        Assert.Equal(friday, saved.OrderDate);
+        Assert.Empty((await service.GetTodayAsync(2)).Orders);
+        Assert.Single((await service.GetDayAsync(2, friday)).Orders);
+        await service.DeleteAsync(2, saved.Id, saved.Revision);
+        Assert.Empty((await service.GetDayAsync(2, friday)).Orders);
+    }
+
+    [Fact]
+    public async Task Future_orders_require_a_published_weekday_and_sperring()
+    {
+        Assert.Equal(400, (await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(2,
+            new() { MenuItemId = 100, DeliveryDate = new(2026, 9, 26) }))).StatusCode);
+        var pizza = Pizza(); pizza.DeliveryDate = new(2026, 9, 25);
+        Assert.Equal(400, (await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(1, pizza))).StatusCode);
+    }
+
+    [Fact]
+    public async Task Shared_dishes_survive_week_rotation_and_stale_close_is_rejected()
+    {
+        var controller = new PizzaApp.Api.Controllers.SperringController(db, clock);
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NoContentResult>(await controller.SaveRegular(new("Gemensam rätt", Guid.Empty)));
+        var before = (await controller.Get()).Value!;
+        Assert.All(before.Menus, m => Assert.Equal("Gemensam rätt", m.RegularDishes));
+        var request = new SperringCloseInput(before.Menus.ToDictionary(m => m.Slot, m => m.Revision));
+        Assert.Equal(400, Assert.IsType<Microsoft.AspNetCore.Mvc.ObjectResult>(await controller.CloseWeek(request)).StatusCode);
+        clock.Now = DateTimeOffset.Parse("2026-09-26T09:00:00Z");
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NoContentResult>(await controller.CloseWeek(request));
+        var after = (await controller.Get()).Value!;
+        Assert.Equal(new[] { 40, 41 }, after.Menus.OrderBy(m => m.Monday).Select(m => m.Week));
+        Assert.All(after.Menus, m => Assert.Equal("Gemensam rätt", m.RegularDishes));
+        Assert.All(after.Menus.Single(m => m.Week == 41).Days, d => Assert.Empty(d));
+        Assert.Equal(409, Assert.IsType<Microsoft.AspNetCore.Mvc.ObjectResult>(await controller.CloseWeek(request)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Week_rotation_preserves_next_menu_across_iso_year_boundary()
+    {
+        clock.Now = DateTimeOffset.Parse("2027-01-02T09:00:00Z");
+        var controller = new PizzaApp.Api.Controllers.SperringController(db, clock);
+        var first = (await controller.Get()).Value!.Menus[0];
+        first.Year = 2026; first.Week = 53; first.Revision = (await db.SperringWeeks.SingleAsync(w => w.Id == 1)).Revision;
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NoContentResult>(await controller.Save(first.Slot, first));
+        var next = (await controller.Get()).Value!.Menus[1];
+        next.Days[2] = "Onsdagens special";
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NoContentResult>(await controller.Save(next.Slot, next));
+        var before = (await controller.Get()).Value!;
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NoContentResult>(await controller.CloseWeek(new(before.Menus.ToDictionary(m => m.Slot, m => m.Revision))));
+        var after = (await controller.Get()).Value!.Menus.OrderBy(m => m.Monday).ToArray();
+        Assert.Equal(2027, after[0].Year);
+        Assert.Equal(new[] { 1, 2 }, after.Select(m => m.Week));
+        Assert.Equal("Onsdagens special", after[0].Days[2]);
+        Assert.All(after[1].Days, d => Assert.Empty(d));
+    }
+
     private static OrderInput Pizza(int quantity = 1, string sauce = "Vitlökssås") => new()
     { MenuItemId = 2, Quantity = quantity, Sauce = sauce, Drink = "Coca-Cola 33cl" };
 

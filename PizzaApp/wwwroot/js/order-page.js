@@ -1,4 +1,7 @@
 window.pizzaPage = {
+    focus(id) {
+        document.getElementById(id)?.focus();
+    },
     async center(id) {
         // Let the browser finish layout after Blazor replaces the empty selection.
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));

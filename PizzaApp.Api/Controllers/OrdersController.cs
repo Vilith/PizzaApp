@@ -10,8 +10,8 @@ namespace PizzaApp.Api.Controllers;
 public class OrdersController(OrderService service) : ControllerBase
 {
     [HttpGet]
-    public Task<ActionResult<DailyOrderList>> GetToday(int restaurantId) =>
-        Handle(() => service.GetTodayAsync(restaurantId));
+    public Task<ActionResult<DailyOrderList>> GetToday(int restaurantId, [FromQuery] DateOnly? date) =>
+        Handle(() => service.GetDayAsync(restaurantId, date));
 
     [HttpPost]
     public Task<ActionResult<OrderDetails>> Create(int restaurantId, OrderInput input) =>

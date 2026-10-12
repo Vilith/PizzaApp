@@ -1,6 +1,7 @@
 @inject ISperringApiService Menus
 @inject IOrderApiService Orders
 @inject IAuthService Auth
+@inject IJSRuntime JS
 
 <section class="sperring" aria-labelledby="sperring-title">
     <header class="sperring-header">
@@ -15,6 +16,21 @@
     }
     else
     {
+        @if (Auth.User?.IsAdmin == true)
+        {
+            <section class="regular-editor" aria-label="Återkommande rätter">
+                <h2>Återkommande rätter</h2>
+                <p>Gäller alla vardagar och veckor. Skriv en maträtt och tryck Enter för nästa rad.</p>
+                @foreach (var row in regularRows)
+                {
+                    <div class="regular-dish-row" @key="row">
+                        <input id="@row.Id" aria-label="Maträtt @(regularRows.IndexOf(row) + 1)" maxlength="200" disabled="@busy" @bind="row.Name" @bind:event="oninput" @onkeydown="e => AddRegularRow(e, row)" />
+                        <button type="button" disabled="@busy" aria-label="Ta bort maträtt @(regularRows.IndexOf(row) + 1)" @onclick="() => RemoveRegularRow(row)">Ta bort</button>
+                    </div>
+                }
+                <button class="primary" disabled="@(busy || editing != null)" @onclick="SaveRegular">Spara återkommande rätter</button>
+            </section>
+        }
         @foreach (var week in page.Menus.OrderBy(m => m.Monday))
         {
             <section class="week-card" @key="week.Slot" aria-label="Meny vecka @week.Week">
@@ -22,23 +38,26 @@
                     <div><p class="eyebrow">@week.Monday.ToString("d/M")–@week.Monday.AddDays(4).ToString("d/M") · @week.Year</p><h2>Meny vecka @week.Week</h2></div>
                     @if (Auth.User?.IsAdmin == true)
                     {
-                        <button disabled="@(busy || editing != null)" @onclick="() => Edit(week)">Redigera meny</button>
+                                                <div class="actions"><button disabled="@(busy || editing != null)" @onclick="() => Edit(week)">Redigera meny</button>
+                        @if (week == page.Menus.OrderBy(m => m.Monday).First())
+                        {
+                            <button disabled="@(busy || editing != null || today <= week.Monday.AddDays(4))" @onclick="CloseWeek">Avsluta vecka @week.Week</button>
+                        }</div>
                     }
                 </div>
                 @if (editing?.Slot == week.Slot)
                 {
                     <div class="editor">
-                        <p>En maträtt per rad. De återkommande rätterna visas varje vardag.</p>
+                        <p>En maträtt per rad. Återkommande rätter hanteras gemensamt ovanför menyerna.</p><button disabled="@busy" @onclick="FillExamples">Fyll i exempelrätter</button><p class="muted">Exempelrätterna publiceras först när du sparar menyn.</p>
                         <fieldset disabled="@busy">
                             <div class="week-fields">
                                 <label>År<input type="number" min="2000" max="2100" @bind="editing.Year" /></label>
                                 <label>Veckonummer<input type="number" min="1" max="53" @bind="editing.Week" /></label>
                             </div>
-                            <label>Återkommande rätter<textarea rows="5" maxlength="6000" @bind="editing.RegularDishes"></textarea></label>
                             @for (var i = 0; i < 5; i++)
                             {
                                 var index = i;
-                                <label>@DayNames[i] – extra rätter<textarea rows="2" maxlength="6000" @bind="editing.Days[index]"></textarea></label>
+                                <label>@DayNames[i] – dagens rätt<textarea rows="3" maxlength="6000" @bind="editing.Days[index]"></textarea></label>
                             }
                             <div class="actions"><button class="primary" @onclick="SaveMenu">Spara meny</button><button @onclick="() => editing = null">Avbryt</button></div>
                         </fieldset>
@@ -47,21 +66,32 @@
                 @for (var i = 0; i < 5; i++)
                 {
                     var date = week.Monday.AddDays(i);
-                    var dishes = week.Dishes(i).ToArray();
-                    var today = date == daily.Date;
-                    <div class="day-row @(today ? "today" : "")">
-                        <div class="day-label"><h3>@DayNames[i]</h3><span>@date.ToString("d/M") @(today ? "· Idag" : "")</span></div>
-                        <div class="dishes">
-                            @if (dishes.Length == 0) { <span class="muted">Menyn kommer snart.</span> }
+                    var dailyDishes = SperringMenu.Lines(week.Days[i]).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                    var regular = SperringMenu.Lines(week.RegularDishes).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                    var isToday = date == today;
+                    <div class="day-row @(isToday ? "today" : "")">
+                        <div class="day-label"><h3>@DayNames[i]</h3><span>@date.ToString("d/M") @(isToday ? "· Idag" : "")</span></div>
+                        <div class="day-menu">
+                        @foreach (var group in new[] { dailyDishes, regular })
+                        {
+                            var isDaily = group == dailyDishes;
+                            var dishes = group;
+                            <div class="dish-group @(isDaily ? "daily-dishes" : "regular-dishes")">
+                            @if (isDaily) { <p class="dish-group-label">Dagens rätt</p> }
+                            <div class="dishes">
+                            @if (dishes.Length == 0) { <span class="muted">@(isDaily ? "Dagens rätt kommer snart." : "Inga återkommande rätter publicerade.")</span> }
                             @foreach (var name in dishes)
                             {
                                 var dish = page.Dishes.FirstOrDefault(d => d.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-                                @if (today && dish != null && !daily.IsLocked)
+                                @if (date >= this.today && dish != null && !(date == daily.Date && daily.IsLocked))
                                 {
-                                    <button class="dish @(selected?.Id == dish.Id ? "selected" : "")" disabled="@busy" @onclick="() => Select(dish)">@name <span aria-hidden="true">＋</span></button>
+                                    <button class="dish @(selected?.Id == dish.Id && selectedDate == date ? "selected" : "")" disabled="@busy" @onclick="() => Select(dish, date)">@name <span aria-hidden="true">＋</span></button>
                                 }
                                 else { <span class="dish static">@name</span> }
                             }
+                            </div>
+                            </div>
+                        }
                         </div>
                     </div>
                 }
@@ -69,17 +99,25 @@
         }
         @if (selected != null)
         {
-            <section class="selection" aria-label="Din beställning">
-                <h2>@selected.Name</h2>
+            <section class="selection" id="sperring-selection" tabindex="-1" aria-label="Din beställning">
+                <h2>@selected.Name</h2><p>Lunch @selectedDate.ToString("d/M")</p>
                 <label>Antal<input type="number" min="1" max="99" @bind="quantity" disabled="@busy" /></label>
                 <label>Kommentar (valfritt)<input maxlength="500" @bind="comment" disabled="@busy" /></label>
-                <div class="actions"><button class="primary" disabled="@busy" @onclick="PlaceOrder">@(busy ? "Sparar…" : "Beställ dagens lunch")</button><button disabled="@busy" @onclick="() => selected = null">Avbryt</button></div>
+                <div class="actions"><button class="primary" disabled="@busy" @onclick="PlaceOrder">@(busy ? "Sparar…" : "Beställ lunch")</button><button disabled="@busy" @onclick="() => selected = null">Avbryt</button></div>
             </section>
         }
         <section class="orders" id="daily-list" aria-labelledby="orders-title">
-            <div class="week-heading"><div><p class="eyebrow">@daily.Date.ToString("yyyy-MM-dd")</p><h2 id="orders-title">Dagens beställningar</h2></div><button disabled="@busy" @onclick="Reload">Uppdatera</button></div>
-            <p class="muted">Välj en rätt under dagens datum för att beställa. Kommande veckor visas för planering.</p>
-            @if (daily.IsLocked) { <p>Dagens beställningar är låsta.</p> }
+            <div class="week-heading"><div><p class="eyebrow">@daily.Date.ToString("yyyy-MM-dd")</p><h2 id="orders-title">Beställningar per dag</h2></div><button disabled="@busy" @onclick="Reload">Uppdatera</button></div>
+            <p class="current-week">Vecka @System.Globalization.ISOWeek.GetWeekOfYear(today.ToDateTime(TimeOnly.MinValue))</p>
+            <div class="day-tabs" aria-label="Välj beställningsdag">
+                @foreach (var date in Enumerable.Range(0, 5).Select(i => CurrentMonday.AddDays(i)))
+                {
+                    <button class="@(daily.Date == date ? "active" : "")" aria-pressed="@(daily.Date == date)" disabled="@busy" @onclick="() => ChangeDay(date)">@DayNames[(int)date.DayOfWeek - 1]</button>
+                }
+            </div>
+            <p class="minimum @(daily.Orders.Count >= 5 ? "reached" : "")" role="status"><strong>@daily.Orders.Count av minst 5 beställningar</strong><br />@(daily.Orders.Count >= 5 ? "Minimiantalet är uppnått." : $"{5 - daily.Orders.Count} beställningar till behövs för att det ska bli mat.")</p>
+            <p class="muted">Sperring kräver minst 5 beställningar per dag. Välj en rätt för önskat datum för att beställa i förväg.</p>
+            @if (daily.IsLocked) { <p>Beställningar per dag är låsta.</p> }
             <div class="order-head"><span>Alias</span><span>Beställd maträtt</span></div>
             @if (daily.Orders.Count == 0) { <p class="empty">Ingen har beställt ännu.</p> }
             @foreach (var order in daily.Orders)
@@ -93,7 +131,7 @@
                     <div><strong>@order.Pizza</strong>@if (order.Quantity > 1) { <span> × @order.Quantity</span> }
                         @if (!string.IsNullOrWhiteSpace(order.Comment)) { <small>@order.Comment</small> }
                     </div>
-                    @if (!daily.IsLocked && (Auth.User?.IsAdmin == true || Auth.User?.Id == order.OwnerUserId))
+                    @if (daily.Date >= today && !daily.IsLocked && (Auth.User?.IsAdmin == true || Auth.User?.Id == order.OwnerUserId))
                     {
                         <button disabled="@busy" aria-label="Ta bort beställning för @order.Name: @order.Pizza" @onclick="() => Delete(order)">Ta bort</button>
                     }
@@ -109,9 +147,31 @@
     private DailyOrderList? daily;
     private SperringMenu? editing;
     private SperringDish? selected;
+    private DateOnly today, selectedDate;
     private int quantity = 1;
     private string? comment, error, message;
-    private bool busy;
+    private bool busy, centerSelection;
+    private sealed class DishRow(string name)
+    {
+        public string Id { get; } = $"regular-dish-{Guid.NewGuid():N}";
+        public string Name { get; set; } = name;
+    }
+    private List<DishRow> regularRows = [];
+    private string? focusRow;
+    private DateOnly CurrentMonday => today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (focusRow != null)
+        {
+            var id = focusRow; focusRow = null;
+            await JS.InvokeVoidAsync("pizzaPage.focus", id);
+        }
+        if (centerSelection && selected != null)
+        {
+            centerSelection = false;
+            await JS.InvokeVoidAsync("pizzaPage.center", "sperring-selection");
+        }
+    }
     protected override Task OnInitializedAsync() => Reload();
     private async Task Run(Func<Task> action)
     {
@@ -125,8 +185,13 @@
     private async Task Load()
     {
         var loaded = await Menus.GetAsync();
-        var orders = await Orders.GetTodayAsync(loaded.RestaurantId);
+        var current = await Orders.GetTodayAsync(loaded.RestaurantId);
+        today = current.Date;
+        var date = daily?.Date ?? (today.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? CurrentMonday : today);
+        var orders = date == today ? current : await Orders.GetDayAsync(loaded.RestaurantId, date);
         page = loaded; daily = orders;
+        regularRows = SperringMenu.Lines(loaded.RegularDishes).Select(name => new DishRow(name)).ToList();
+        regularRows.Add(new DishRow(""));
     }
     private Task Reload() => Run(async () => { await Load(); editing = null; selected = null; });
     private void Edit(SperringMenu week) => editing = new SperringMenu
@@ -136,11 +201,47 @@
         await Menus.SaveAsync(editing!); editing = null; selected = null;
         await Load(); message = "Menyn är sparad.";
     });
-    private void Select(SperringDish dish) { selected = dish; quantity = 1; comment = null; message = null; }
+    private void Select(SperringDish dish, DateOnly date) { centerSelection = true; selectedDate = date; selected = dish; quantity = 1; comment = null; message = null; }
     private Task PlaceOrder() => Run(async () =>
     {
-        await Orders.SaveAsync(page!.RestaurantId, new OrderInput { MenuItemId = selected!.Id, Quantity = quantity, Comment = comment });
-        selected = null; await Load(); message = "Din beställning är sparad.";
+        await Orders.SaveAsync(page!.RestaurantId, new OrderInput { DeliveryDate = selectedDate, MenuItemId = selected!.Id, Quantity = quantity, Comment = comment });
+        daily = await Orders.GetDayAsync(page.RestaurantId, selectedDate); selected = null; await Load(); message = "Din beställning är sparad.";
+    });
+    private Task ChangeDay(DateOnly date) => Run(async () =>
+    {
+        var loaded = await Orders.GetDayAsync(page!.RestaurantId, date);
+        daily = loaded; selected = null;
+    });
+    private void FillExamples()
+    {
+        editing!.RegularDishes = page!.RegularDishes;
+        editing.Days = ["Köttbullar med potatismos", "Lax med citronsås", "Lasagne", "Ärtsoppa och pannkakor", "Kyckling med ris och currysås"];
+    }
+    private Task SaveRegular() => Run(async () =>
+    {
+        await Menus.SaveRegularAsync(new(string.Join("\n", regularRows.Select(row => row.Name.Trim()).Where(name => name.Length > 0)), page!.RegularRevision));
+        await Load(); message = "De återkommande rätterna är sparade för alla veckor.";
+    });
+    private void AddRegularRow(KeyboardEventArgs e, DishRow row)
+    {
+        if (busy || e.Key != "Enter" || e.IsComposing) return;
+        var index = regularRows.IndexOf(row);
+        if (string.IsNullOrWhiteSpace(row.Name)) { focusRow = row.Id; return; }
+        if (index + 1 < regularRows.Count && string.IsNullOrWhiteSpace(regularRows[index + 1].Name))
+        { focusRow = regularRows[index + 1].Id; return; }
+        if (regularRows.Count >= 30) { error = "Du kan fylla i högst 30 återkommande rätter."; return; }
+        var next = new DishRow(""); regularRows.Insert(index + 1, next); focusRow = next.Id;
+    }
+    private void RemoveRegularRow(DishRow row)
+    {
+        regularRows.Remove(row);
+        if (regularRows.Count == 0) regularRows.Add(new DishRow(""));
+    }
+    private Task CloseWeek() => Run(async () =>
+    {
+        await Menus.CloseWeekAsync(new(page!.Menus.ToDictionary(m => m.Slot, m => m.Revision)));
+        selected = null; editing = null; daily = null;
+        await Load(); message = "Veckan är avslutad. Nästa vecka har flyttats upp och en ny vecka har öppnats.";
     });
     private Task Delete(OrderDetails order) => Run(async () =>
     {

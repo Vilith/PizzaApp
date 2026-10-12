@@ -28,6 +28,7 @@ public static class MenuSauce
 
 public class OrderInput
 {
+    public DateOnly? DeliveryDate { get; set; }
     [Range(0, int.MaxValue)] public int MenuItemId { get; set; }
     public bool DrinkOnly { get; set; }
     [Range(1, 99, ErrorMessage = "Ange mellan 1 och 99 portioner.")]

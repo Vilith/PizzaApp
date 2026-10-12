@@ -187,15 +187,15 @@ else if (restaurant != null)
             }
             else
             {
-            <p class="muted">Gemensam lista · @daily.Orders.Where(o => !o.DrinkOnly).Sum(o => o.Quantity) portioner · @daily.Orders.Where(o => o.DrinkOnly).Sum(o => o.Quantity) extra drycker · Hämtad @lastRefreshed</p>
+            <p class="muted">Listan senast uppdaterad @lastRefreshed</p>
             @if (daily.Orders.Count == 0)
             {
-                <div class="empty-list">Ingen har beställt ännu. Lägg till dagens första rätt!</div>
+                <div class="empty-list">Ingen har beställt ännu.</div>
             }
             else
             {
                 <div class="summary-box">
-                    <h3>Att ringa in</h3>
+                    <h3>Ringa och beställa</h3>
                     <div data-list="food-summary">
                         @foreach (var group in daily.Orders.Where(o => !o.DrinkOnly)
                             .GroupBy(o => new { o.MenuItemId, o.Pizza, o.Sauce, o.Comment })

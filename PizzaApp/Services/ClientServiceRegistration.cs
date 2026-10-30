@@ -1,3 +1,5 @@
+// Registrera klientens tjänster och HTTP-klienter.
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace PizzaApp.Services;

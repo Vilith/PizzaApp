@@ -1,3 +1,6 @@
+/* Inloggningsformulär och växling till registrering. */
+
+/* PANELER: innehållets ram och avstånd. */
 .panel { background: white; border: 1px solid #dce4ed; border-radius: 14px; padding: 26px; }
 .eyebrow { font-size: 11px; font-weight: 750; letter-spacing: 1.7px; color: #52749a; margin-bottom: 8px; }
 h1 { font-size: 28px; font-weight: 750; }

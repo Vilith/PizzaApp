@@ -1,3 +1,5 @@
+// Statistikkontrakt: år, totalsummor, ordervärde och topplistor.
+
 namespace PizzaApp.Shared;
 
 public record RankedCount(string Name, int Count);

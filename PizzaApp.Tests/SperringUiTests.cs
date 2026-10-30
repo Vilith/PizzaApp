@@ -1,3 +1,5 @@
+// Regressionstester för SperringUi: förutsättningar, testfall och testdubblar.
+
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using PizzaApp.Components.Pages;
@@ -19,6 +21,8 @@ public class SperringUiTests : TestContext
         Services.AddSingleton<IOrderApiService>(orders);
     }
 
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
+
     [Fact]
     public void Member_sees_two_weeks_alias_avatar_and_can_choose_future_dishes()
     {
@@ -32,7 +36,7 @@ public class SperringUiTests : TestContext
         Assert.Contains("Alias", page.Find(".order-head").TextContent);
         Assert.Contains("Lunchvän", page.Find(".person").TextContent);
         Assert.Equal(TestProfileImage.Png, page.Find(".person img").GetAttribute("src"));
-        page.FindAll("button.dish").Single(b => b.TextContent.Contains("Soppa")).Click();
+        page.FindAll(".day-row").ToArray()[1].QuerySelectorAll("button.dish").Single(b => b.TextContent.Contains("Dagens rätt")).Click();
         page.Find(".selection .primary").Click();
         Assert.Equal(12, orders.Saved!.MenuItemId);
         Assert.Equal(new DateOnly(2026, 9, 22), orders.Saved.DeliveryDate);
@@ -59,7 +63,7 @@ public class SperringUiTests : TestContext
     public void Future_dish_uses_its_date_and_opens_that_days_orders()
     {
         var page = RenderComponent<SperringMenuPage>();
-        page.FindAll("button.dish").Single(b => b.TextContent.Contains("Fisk")).Click();
+        page.FindAll(".day-row").ToArray()[2].QuerySelectorAll("button.dish").Single(b => b.TextContent.Contains("Dagens sallad")).Click();
         page.Find(".selection .primary").Click();
         Assert.Equal(new DateOnly(2026, 9, 23), orders.Saved!.DeliveryDate);
         Assert.Contains("2026-09-23", page.Find(".orders .eyebrow").TextContent);
@@ -93,13 +97,18 @@ public class SperringUiTests : TestContext
         menus.Page.Dishes.Add(new(15, description));
         var page = RenderComponent<SperringMenuPage>();
         var day = page.FindAll(".day-row").ToArray()[1];
-        Assert.Contains(description, day.QuerySelector(".daily-dishes")!.TextContent);
+        Assert.Contains("Dagens rätt", day.QuerySelector(".daily-dishes")!.TextContent);
+        Assert.Contains("Dagens sallad", day.QuerySelector(".daily-dishes")!.TextContent);
+        Assert.DoesNotContain(description, day.TextContent);
+        Assert.Empty(page.FindAll("iframe"));
+        Assert.Equal("https://www.sperringsmat.se/lunch-meny", page.Find(".source-menu a").GetAttribute("href"));
+        Assert.Contains("Vecka 39", page.Find(".source-menu-content").TextContent);
         Assert.DoesNotContain("Pasta", day.QuerySelector(".daily-dishes")!.TextContent);
         Assert.Contains("Pasta", day.QuerySelector(".regular-dishes")!.TextContent);
         Assert.Equal("daily-dishes", day.QuerySelector(".dish-group")!.ClassList.Last());
         day.QuerySelector(".daily-dishes button")!.Click();
         page.Find(".selection .primary").Click();
-        Assert.Equal(15, orders.Saved!.MenuItemId);
+        Assert.Equal(12, orders.Saved!.MenuItemId);
     }
 
     [Fact]
@@ -112,23 +121,77 @@ public class SperringUiTests : TestContext
         Assert.Contains("Köttbullar", page.Find(".editor textarea").GetAttribute("value") ?? page.Find(".editor textarea").TextContent);
     }
 
+    // ORIGINALMENY: källfel får inte blockera beställningar och kan följas av ett nytt försök.
+    [Fact]
+    public void Website_failure_keeps_ordering_available_and_can_be_retried()
+    {
+        menus.WebsiteFails = true;
+        var page = RenderComponent<SperringMenuPage>();
+        Assert.Contains("Kunde inte hämta originalmenyn", page.Find(".source-menu").TextContent);
+        Assert.NotEmpty(page.FindAll("button.dish"));
+
+        menus.WebsiteFails = false;
+        page.Find(".source-menu button").Click();
+
+        Assert.Contains("Exempellunch", page.Find(".source-menu-content").TextContent);
+        Assert.Empty(page.FindAll(".source-menu [role=alert]"));
+    }
+
+    // MENYBILD: PNG visas med originalets proportioner och texten finns som alternativ.
+    [Fact]
+    public void Shows_screenshot_and_warns_when_last_refresh_failed()
+    {
+        menus.Image = new(TestProfileImage.Png, DateTimeOffset.Parse("2026-10-30T12:00:00Z"), true);
+        var page = RenderComponent<SperringMenuPage>();
+
+        Assert.Equal(TestProfileImage.Png, page.Find(".source-menu-image").GetAttribute("src"));
+        Assert.Contains("Kunde inte uppdatera bilden", page.Find(".source-menu-updated").TextContent);
+        Assert.False(page.Find(".source-menu-text").HasAttribute("open"));
+        Assert.NotEmpty(page.FindAll("button.dish"));
+    }
+
+    [Fact]
+    public void Image_failure_opens_text_menu_and_keeps_ordering_available()
+    {
+        menus.ImageFails = true;
+        var page = RenderComponent<SperringMenuPage>();
+
+        Assert.Empty(page.FindAll(".source-menu-image"));
+        Assert.Contains("Menybilden kunde inte hämtas", page.Find(".source-menu").TextContent);
+        Assert.True(page.Find(".source-menu-text").HasAttribute("open"));
+        Assert.NotEmpty(page.FindAll("button.dish"));
+    }
+
+    // TESTDUBBEL: levererar menydata eller ett simulerat källfel.
     private class MenuApi : ISperringApiService
     {
+        public SperringMenuImage? Image;
+        public bool ImageFails;
+        public Task<SperringMenuImage?> GetWebsiteMenuImageAsync() => ImageFails
+            ? Task.FromException<SperringMenuImage?>(new HttpRequestException("Källan är nere"))
+            : Task.FromResult(Image);
+        public bool WebsiteFails;
+        public Task<SperringWebsiteMenu> GetWebsiteMenuAsync() =>
+            WebsiteFails ? Task.FromException<SperringWebsiteMenu>(new HttpRequestException("Källan är nere")) :
+                Task.FromResult(new SperringWebsiteMenu(["Vecka 39", "Måndag:", "Exempellunch", "Veckans Sallader", "Exempelsallad"]));
         public SperringMenu? Saved;
         public SperringRegularInput? SavedRegular;
         public SperringPage Page = new(2,
             [new() { Slot = 1, Year = 2026, Week = 39, RegularDishes = "Pasta", Days = ["", "Soppa", "Fisk", "", ""] },
              new() { Slot = 2, Year = 2026, Week = 40, RegularDishes = "Nästa vecka" }],
-            [new(11, "Pasta"), new(12, "Soppa"), new(13, "Fisk"), new(14, "Nästa vecka")]);
+            [new(11, "Pasta"), new(12, "Dagens rätt"), new(13, "Dagens sallad"), new(14, "Nästa vecka")]);
         public Task<SperringPage> GetAsync() => Task.FromResult(Page);
         public Task SaveAsync(SperringMenu menu) { Saved = menu; return Task.CompletedTask; }
         public Task SaveRegularAsync(SperringRegularInput input) { SavedRegular = input; return Task.CompletedTask; }
     }
+    // TESTDUBBEL: isolerar testet från externa beroenden.
     private class OrderApi : IOrderApiService
     {
         public OrderInput? Saved;
         public Task<DailyOrderList> GetTodayAsync(int id) => Task.FromResult(new DailyOrderList
         { Date = new(2026, 9, 22), Orders = [new() { Id = 1, Name = "Lunchvän", Pizza = "Pasta", AvatarDataUrl = TestProfileImage.Png }] });
+
+        // Dagslista: läs beställningar och status för önskat datum.
         public async Task<DailyOrderList> GetDayAsync(int id, DateOnly date)
         {
             var day = await GetTodayAsync(id);
@@ -138,7 +201,11 @@ public class SperringUiTests : TestContext
         public Task<OrderDetails> SaveAsync(int id, OrderInput input, int? orderId = null)
         { Saved = input; return Task.FromResult(new OrderDetails()); }
         public Task DeleteAsync(int restaurantId, int id, Guid revision) => Task.CompletedTask;
+
+        // Hämtare: uppdatera vilka beställare som kan hämta maten.
         public Task<DailyOrderList> SetCollectorAsync(int restaurantId, int id, CollectorInput input) => GetTodayAsync(restaurantId);
+
+        // Historik: avsluta dagen och spara en ögonblicksbild.
         public Task<DailyOrderList> CompleteAsync(int restaurantId, CompleteDayInput input) => GetTodayAsync(restaurantId);
     }
 }

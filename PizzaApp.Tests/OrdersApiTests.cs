@@ -1,3 +1,5 @@
+// Regressionstester för OrdersApi: förutsättningar, testfall och testdubblar.
+
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
@@ -17,6 +19,9 @@ namespace PizzaApp.Tests;
 
 public class OrdersApiTests
 {
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
+
     [Fact]
     public async Task Statistics_client_reads_completed_pizzeria_history_and_requires_login()
     {
@@ -35,6 +40,7 @@ public class OrdersApiTests
         client.DefaultRequestHeaders.Authorization = null;
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/statistics/pizzeria")).StatusCode);
     }
+
     [Fact]
     public async Task Client_service_uses_restaurant_routes_and_surfaces_deadline_errors()
     {
@@ -192,7 +198,7 @@ public class OrdersApiTests
         client.DefaultRequestHeaders.Authorization = new("Bearer", "member");
         var profile = (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!;
         (await client.PutAsJsonAsync("/api/auth/profile", new ProfileInput { DisplayName = "Lunchvän", AvatarDataUrl = TestProfileImage.Png, Revision = profile.ProfileRevision })).EnsureSuccessStatusCode();
-        var input = new OrderInput { MenuItemId = page.Dishes.Single(d => d.Name == "Tisdagssoppa").Id };
+        var input = new OrderInput { MenuItemId = page.Dishes.Single(d => d.Name == "Dagens rätt").Id };
         (await client.PostAsJsonAsync("/api/restaurants/2/orders", input)).EnsureSuccessStatusCode();
         var order = Assert.Single((await client.GetFromJsonAsync<DailyOrderList>("/api/restaurants/2/orders"))!.Orders);
         Assert.Equal("Lunchvän", order.Name);
@@ -202,6 +208,8 @@ public class OrdersApiTests
         input.MenuItemId = 5; // Legacy example dishes must not bypass the published menu.
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/restaurants/2/orders", input)).StatusCode);
     }
+
+    // TESTDUBBEL: isolerar testet från externa beroenden.
 
     private sealed class TestApp(bool locked = false) : WebApplicationFactory<Program>
     {
@@ -241,13 +249,19 @@ public class OrdersApiTests
             db.SaveChanges();
             return host;
         }
+
+        // Städning: koppla bort händelser och frigör resurser.
         protected override void Dispose(bool disposing) { base.Dispose(disposing); if (disposing) connection.Dispose(); }
     }
+
+    // TESTDUBBEL: isolerar testet från externa beroenden.
 
     private sealed class FixedClock : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => DateTimeOffset.Parse("2026-09-22T12:00:00Z");
     }
+
+    // TESTDUBBEL: isolerar testet från externa beroenden.
 
     private sealed class AuthServer : HttpMessageHandler
     {

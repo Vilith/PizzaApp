@@ -1,3 +1,5 @@
+// Regressionstester för PasswordSettings: förutsättningar, testfall och testdubblar.
+
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using PizzaApp.Components.Pages;
@@ -9,6 +11,8 @@ public class PasswordSettingsTests : TestContext
 {
     private readonly FakeAuth auth = new();
     public PasswordSettingsTests() => Services.AddSingleton<IAuthService>(auth);
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]
     public void Admin_selects_colleague_reauthenticates_and_can_hide_temporary_password()

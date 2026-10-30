@@ -1,7 +1,11 @@
+// BESTÄLLNINGSVYN: fokus och scrollning efter att Blazor har uppdaterat sidan.
+
 window.pizzaPage = {
+    // FOKUS: placera markören i nästa rad för återkommande rätter.
     focus(id) {
         document.getElementById(id)?.focus();
     },
+    // SCROLLNING: visa beställningsformuläret och respektera minskad rörelse.
     async center(id) {
         // Let the browser finish layout after Blazor replaces the empty selection.
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));

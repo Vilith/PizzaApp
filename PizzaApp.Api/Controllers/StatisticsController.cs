@@ -1,3 +1,5 @@
+// Statistik-API: tillgängliga år och beställningshistorik.
+
 using Microsoft.AspNetCore.Mvc;
 using PizzaApp.Api.Services;
 using PizzaApp.Shared;
@@ -8,6 +10,7 @@ namespace PizzaApp.Api.Controllers;
 [Route("api/statistics/pizzeria")]
 public class StatisticsController(StatisticsService service) : ControllerBase
 {
+    // LÄSNING: hämta data för klienten.
     [HttpGet]
     public async Task<ActionResult<PizzeriaStatistics>> Get([FromQuery] int? year)
     {

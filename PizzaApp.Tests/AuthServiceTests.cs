@@ -1,3 +1,5 @@
+// Regressionstester för AuthService: förutsättningar, testfall och testdubblar.
+
 using System.Net;
 using System.Net.Http.Json;
 using PizzaApp.Services;
@@ -8,6 +10,9 @@ namespace PizzaApp.Tests;
 
 public class AuthServiceTests
 {
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
+
     [Fact]
     public async Task Browser_http_clients_share_login_but_separate_browser_containers_do_not()
     {
@@ -27,6 +32,8 @@ public class AuthServiceTests
         await auth.SignOutAsync();
         await Assert.ThrowsAsync<AuthException>(() => orders.GetTodayAsync(1));
     }
+
+    // TESTDUBBEL: isolerar testet från externa beroenden.
 
     private sealed class BrowserOrderHandler : HttpMessageHandler
     {
@@ -122,6 +129,8 @@ public class AuthServiceTests
         Assert.Equal("Pizzafan", auth.User!.DisplayName);
     }
 
+    // TESTDUBBEL: isolerar testet från externa beroenden.
+
     private sealed class ResponseHandler(HttpStatusCode status) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -131,6 +140,8 @@ public class AuthServiceTests
             return Task.FromResult(new HttpResponseMessage(status));
         }
     }
+
+    // TESTDUBBEL: isolerar testet från externa beroenden.
 
     private sealed class Backend : HttpMessageHandler, IHttpClientFactory
     {

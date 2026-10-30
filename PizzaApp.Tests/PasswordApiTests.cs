@@ -1,3 +1,5 @@
+// Regressionstester för PasswordApi: förutsättningar, testfall och testdubblar.
+
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -20,6 +22,8 @@ public class PasswordApiTests
 {
     private static readonly Guid Admin = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid Member = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Theory]
     [InlineData(null, HttpStatusCode.Unauthorized)]
@@ -105,6 +109,8 @@ public class PasswordApiTests
         Assert.Equal(missingKey ? 0 : 1, app.Provider.Updates);
     }
 
+    // TESTDUBBEL: isolerar testet från externa beroenden.
+
     private sealed class App(bool missingKey = false) : WebApplicationFactory<Program>
     {
         private readonly SqliteConnection connection = new("Data Source=:memory:");
@@ -144,8 +150,11 @@ public class PasswordApiTests
             db.SaveChanges();
             return host;
         }
+
+        // Städning: koppla bort händelser och frigör resurser.
         protected override void Dispose(bool disposing) { base.Dispose(disposing); if (disposing) connection.Dispose(); }
     }
+    // TESTDUBBEL: isolerar testet från externa beroenden.
     private sealed class Provider : HttpMessageHandler
     {
         public int Updates;

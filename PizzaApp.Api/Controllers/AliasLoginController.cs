@@ -1,3 +1,5 @@
+// Inloggnings-API: verifiera alias och lösenord via Supabase.
+
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +17,7 @@ namespace PizzaApp.Api.Controllers;
 [EnableRateLimiting("Registration"), RequestSizeLimit(4096)]
 public sealed class AliasLoginController(PizzaDbContext db, IOptions<SupabaseOptions> options, IHttpClientFactory clients) : ControllerBase
 {
+    // ÅTGÄRD: skapa data eller utför kommandot efter validering.
     [HttpPost]
     public async Task<IActionResult> Login(AliasLogin input, CancellationToken ct)
     {

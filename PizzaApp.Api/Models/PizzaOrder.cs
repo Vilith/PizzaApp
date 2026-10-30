@@ -1,4 +1,6 @@
-﻿namespace PizzaApp.Api.Models
+// Sparad beställning med ägare, datum, val och samtidighetsrevision.
+
+namespace PizzaApp.Api.Models
 {
     public class PizzaOrder
     {

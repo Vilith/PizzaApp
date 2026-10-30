@@ -1,5 +1,8 @@
+@* Byggplatssida med kattanimationer, skämt och rörelsekontroller. *@
+
 @inject NavigationManager Navigation
 
+@* VYSEKTION: Byggplatsvy med animation och rörelsekontroller. *@
 <section class="build-site @(paused ? "paused" : "")" aria-labelledby="build-title">
     <div class="site-topline">
         <span class="site-brand">SPERRING<span>BYGGPLATS / NR. 001</span></span>
@@ -63,6 +66,7 @@
 </section>
 
 @code {
+    // SIDANS TILLSTÅND: fält, formulärmodeller och komponentparametrar.
     private bool paused;
     private int jokeIndex;
     private static readonly string[] jokes =

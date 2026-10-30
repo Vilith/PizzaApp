@@ -1,3 +1,5 @@
+// Starta Blazor-klienten och registrera tjänster på samma grundadress.
+
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using PizzaApp.Components;

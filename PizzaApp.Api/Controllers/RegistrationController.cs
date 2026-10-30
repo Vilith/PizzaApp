@@ -1,3 +1,5 @@
+// Registrerings-API: skapa eller aktivera konto.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -13,8 +15,10 @@ namespace PizzaApp.Api.Controllers;
 [Route("api/registration")]
 public class RegistrationController(RegistrationService service) : ControllerBase
 {
+    // ÅTGÄRD: skapa data eller utför kommandot efter validering.
     [HttpPost("start")]
     public Task<IActionResult> Start(RegistrationInput input, CancellationToken ct) => Handle(() => service.StartAsync(input, ct));
+    // ÅTGÄRD: skapa data eller utför kommandot efter validering.
     [HttpPost("activate")]
     public Task<IActionResult> Activate(RegistrationInput input, CancellationToken ct) => Handle(() => service.ActivateAsync(input, ct));
 

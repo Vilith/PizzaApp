@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="sv">
+<!-- SIDHUVUD: metadata, stilmallar och grundadress. -->
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -16,9 +17,11 @@
 
     <div class="status-bar-safe-area"></div>
 
+    <!-- APPROT: Blazor ersätter startmeddelandet med sidans komponenter. -->
     <div id="app"><p class="startup-message" role="status">Startar Pizza-appen…</p></div>
     <noscript>Aktivera JavaScript i webbläsaren för att använda Pizza-appen.</noscript>
 
+    <!-- ENTRÉSCEN: övergången vid restaurangval. -->
     <div id="entrance" class="entrance" hidden>
         <div class="entrance-scene" aria-hidden="true">
             <div class="entrance-wall">
@@ -45,6 +48,7 @@
 
     <script src="js/entrance.js"></script>
     <script src="js/order-page.js?v=4"></script>
+    <!-- START: ladda Blazor-klienten. -->
     <script src="_framework/blazor.webassembly.js"></script>
 
 </body>

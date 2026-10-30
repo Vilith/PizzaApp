@@ -1,3 +1,5 @@
+// Beräkna årsstatistik och topplistor från avslutade beställningsdagar.
+
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PizzaApp.Api.Data;
@@ -51,6 +53,7 @@ public class StatisticsService(PizzaDbContext db, IOptions<StatisticsOptions> op
         };
     }
 
+    // Topplista: sortera och sammanställ räknade poster.
     private static List<RankedCount> Rank(IEnumerable<RankedCount> rows) => rows
         .GroupBy(r => r.Name.Trim(), StringComparer.OrdinalIgnoreCase)
         .Select(g => new RankedCount(g.Key, g.Sum(r => r.Count)))

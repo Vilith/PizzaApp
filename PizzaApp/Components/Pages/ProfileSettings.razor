@@ -1,3 +1,5 @@
+@* Redigering av alias, profilbild och obligatoriska kontouppgifter. *@
+
 @page "/settings"
 @inject IAuthService Auth
 @implements IDisposable
@@ -8,6 +10,8 @@
 }
 else
 {
+
+    @* VYSEKTION: Alias, profilbild och kontouppgifter. *@
     <section class="profile-panel" aria-labelledby="profile-heading">
         <p class="eyebrow">MIN PROFIL</p>
         <h1 id="profile-heading">@(Auth.User.MustChangePassword ? "Välj ett eget lösenord" : string.IsNullOrWhiteSpace(Auth.User.DisplayName) ? "Välj ditt namn eller nick" : "Inställningar")</h1>
@@ -58,6 +62,7 @@ else
 }
 
 @code {
+    // SIDANS TILLSTÅND: fält, formulärmodeller och komponentparametrar.
     private ProfileInput input = new();
     private Guid? loadedUser;
     private bool busy;
@@ -75,6 +80,8 @@ else
         if (loadedUser != Auth.User?.Id) { LoadInput(); error = success = null; }
         StateHasChanged();
     });
+
+    // Städning: koppla bort händelser och frigör resurser.
     public void Dispose() => Auth.Changed -= Changed;
     private static bool IsConnectionError(Exception ex) => ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException;
 

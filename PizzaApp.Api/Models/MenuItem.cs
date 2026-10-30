@@ -1,3 +1,5 @@
+// En menyrätt med pris, beskrivning och koppling till restaurang.
+
 namespace PizzaApp.Api.Models
 {
     public class MenuItem

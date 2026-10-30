@@ -1,3 +1,5 @@
+// HTTP-anrop för dagslistor och ändring av beställningar.
+
 using System.Net.Http.Json;
 using PizzaApp.Shared;
 

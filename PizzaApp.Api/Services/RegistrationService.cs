@@ -1,3 +1,5 @@
+// Registrera och aktivera konton via Supabase och skapa lokal profil.
+
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -12,6 +14,8 @@ namespace PizzaApp.Api.Services;
 public sealed class RegistrationService(IOptions<SupabaseOptions> supabase,
     IHttpClientFactory clients, PizzaDbContext db)
 {
+
+    // Konfiguration: kontrollera att inloggningstjänsten är inställd.
     private void CheckConfiguration()
     {
         if (!supabase.Value.IsConfigured)
@@ -50,6 +54,7 @@ public sealed class RegistrationService(IOptions<SupabaseOptions> supabase,
         await EnrollAsync(response, input.Email, name, cancellationToken);
     }
 
+    // Registrering: koppla det skapade kontot till lokal medlemsprofil.
     private async Task EnrollAsync(HttpResponseMessage response, string email, string name, CancellationToken cancellationToken)
     {
         using var session = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
@@ -87,6 +92,7 @@ public sealed class RegistrationService(IOptions<SupabaseOptions> supabase,
         { throw new OrderException(409, "Aliaset kan vara upptaget. Välj Slutför befintligt konto och försök igen med ett annat nick."); }
     }
 
+    // Alias: kontrollera att namnet inte används av ett annat konto.
     private async Task CheckAliasAsync(string name, Guid? owner, CancellationToken ct)
     {
         var key = PizzaDbContext.NormalizeAlias(name);

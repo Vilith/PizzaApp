@@ -1,3 +1,4 @@
+# 1. BYGGMILJÖ: återställ paket och publicera servern med Blazor-klienten.
 FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
 WORKDIR /src
 
@@ -12,11 +13,15 @@ COPY PizzaApp/ PizzaApp/
 COPY PizzaApp.Api/ PizzaApp.Api/
 RUN dotnet publish PizzaApp.Api/PizzaApp.Api.csproj -c Release --no-restore -o /app/publish /p:UseAppHost=false
 
+# 2. KÖRMILJÖ: publicerade filer, HTTP-port och användare utan rootbehörighet.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_HTTP_PORTS=10000
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 EXPOSE 10000
 COPY --from=build /app/publish .
+# 3. MENYBILD: installera Chromium under bygget, aldrig vid besökarens första anrop.
+RUN dotnet PizzaApp.Api.dll --install-menu-browser
 USER $APP_UID
 ENTRYPOINT ["dotnet", "PizzaApp.Api.dll"]

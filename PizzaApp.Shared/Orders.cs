@@ -1,13 +1,17 @@
+// Beställningskontrakt, lunchval och summeringar som delas mellan klient och API.
+
 using System.ComponentModel.DataAnnotations;
 
 namespace PizzaApp.Shared;
 
+// 1. TILLVAL: gemensamma namn för såser och drycker.
 public static class PizzaChoices
 {
     public static readonly string[] Sauces = ["Ingen sås", "Vitlökssås", "Bearnaisesås", "Kebabsås", "Kebabsås (Mixad)", "Kebabsås (Stark)"];
     public static readonly string[] Drinks = ["Coca-Cola 33cl", "Fanta 33cl", "Sprite 33cl", "Pepsi Max 33cl"];
 }
 
+// 2. FÖRVAL: hitta den sås som ingår i rättens ingrediensbeskrivning.
 public static class MenuSauce
 {
     public static string DefaultFor(string description)
@@ -26,6 +30,7 @@ public static class MenuSauce
     }
 }
 
+// 3. INDATA: kundens val och valideringsregler för skapa/ändra.
 public class OrderInput
 {
     public DateOnly? DeliveryDate { get; set; }
@@ -45,6 +50,7 @@ public class OrderInput
     public Guid Revision { get; set; }
 }
 
+// 4. SVARSDATA: sparade uppgifter, pris och beställarens profil.
 public class OrderDetails : OrderInput
 {
     public string? Category { get; set; }
@@ -61,6 +67,7 @@ public class OrderDetails : OrderInput
 
 public record OrderSummary(string Pizza, string? Sauce, string? Drink, string? Comment, int Quantity);
 
+// 5. DAGSLISTA: beställningar, deadline och status för avslutad dag.
 public class DailyOrderList
 {
     public DateTime? CollectedAt { get; set; }
@@ -74,5 +81,6 @@ public class DailyOrderList
     public List<OrderSummary> Summary { get; set; } = [];
 }
 
+// 6. KOMMANDON: hämtarval och avslut använder revisioner för samtidighet.
 public record CollectorInput(bool CanCollect, Guid Revision, DateOnly Date);
 public record CompleteDayInput(DateOnly Date, Dictionary<int, Guid> Revisions);

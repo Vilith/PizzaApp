@@ -1,3 +1,5 @@
+// Regressionstester för Statistics: förutsättningar, testfall och testdubblar.
+
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Microsoft.Data.Sqlite;
@@ -11,6 +13,9 @@ namespace PizzaApp.Tests;
 
 public class StatisticsTests
 {
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
+
     [Fact]
     public async Task Mixed_food_and_standalone_drinks_count_separate_prices_and_all_cans()
     {

@@ -1,3 +1,5 @@
+// Verifiera Supabase-token och skapa användaridentitet och roller för API-anrop.
+
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Encodings.Web;

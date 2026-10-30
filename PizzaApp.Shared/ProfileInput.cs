@@ -1,3 +1,5 @@
+// Profiluppgifter och validering av uppladdade PNG-bilder.
+
 using System.ComponentModel.DataAnnotations;
 using System.Buffers.Binary;
 

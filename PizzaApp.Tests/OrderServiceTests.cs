@@ -1,3 +1,5 @@
+// Regressionstester för OrderService: förutsättningar, testfall och testdubblar.
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -30,6 +32,8 @@ public class OrderServiceTests : IDisposable
         db.SaveChanges();
         service = new(db, clock, Options.Create(settings), actor);
     }
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]
     public async Task Sperring_future_orders_are_separate_and_can_be_deleted()
@@ -318,7 +322,9 @@ public class OrderServiceTests : IDisposable
         Assert.Equal(2, await db.Orders.CountAsync());
     }
 
+    // Städning: koppla bort händelser och frigör resurser.
     public void Dispose() { db.Dispose(); connection.Dispose(); }
+
     [Fact]
     public async Task Completed_day_preserves_prices_collectors_and_choices_and_is_immutable()
     {
@@ -400,6 +406,7 @@ public class OrderServiceTests : IDisposable
         Assert.Single(completed.CollectedBy);
         Assert.False((await service.GetTodayAsync(2)).IsLocked);
     }
+
     [Fact]
     public async Task Concurrent_database_update_does_not_overwrite_another_users_changes()
     {
@@ -421,6 +428,8 @@ public class OrderServiceTests : IDisposable
         Assert.Empty((await service.GetTodayAsync(1)).Orders);
         Assert.Single(db.Orders);
     }
+
+    // TESTDUBBEL: isolerar testet från externa beroenden.
 
     private sealed class TestClock : TimeProvider
     {

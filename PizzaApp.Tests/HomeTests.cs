@@ -1,3 +1,5 @@
+// Regressionstester för Home: förutsättningar, testfall och testdubblar.
+
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using PizzaApp.Components.Pages;
@@ -25,6 +27,8 @@ public class HomeTests : TestContext
         Services.AddSingleton<IRestaurantApiService>(new FakeRestaurants());
         Services.AddSingleton<IStatisticsApiService>(new FakeStatistics());
     }
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]
     public void Call_in_summary_combines_pizza_and_sauce_regardless_of_person_or_drink()
@@ -193,6 +197,7 @@ public class HomeTests : TestContext
         page.Find("[data-restaurant='1']").Click();
         Assert.NotEmpty(page.FindAll("[data-menu-item='2']"));
     }
+
     [Fact]
     public void Delete_requires_confirmation_and_sends_current_revision()
     {
@@ -344,6 +349,8 @@ public class HomeTests : TestContext
         Assert.Equal("Ingen sås", orders.Saved.Sauce);
     }
 
+    // TESTDUBBEL: isolerar testet från externa beroenden.
+
     private class FakeSperring : ISperringApiService
     {
         public Task<SperringPage> GetAsync() => Task.FromResult(new SperringPage(2,
@@ -405,6 +412,8 @@ public class HomeTests : TestContext
         Assert.False(orders.Saved.DrinkOnly);
     }
 
+    // TESTDUBBEL: isolerar testet från externa beroenden.
+
     private class FakeStatistics : IStatisticsApiService
     {
         public bool Fail { get; set; }
@@ -421,6 +430,8 @@ public class HomeTests : TestContext
         }
     }
 
+    // TESTDUBBEL: isolerar testet från externa beroenden.
+
     private class FakeRestaurants : IRestaurantApiService
     {
         public Task<List<Restaurant>> GetRestaurantsAsync() => Task.FromResult<List<Restaurant>>([
@@ -434,10 +445,16 @@ public class HomeTests : TestContext
             : [new() { Id = 100, RestaurantId = 2, Name = "Dagens rätt", Price = 100 }]);
     }
 
+    // TESTDUBBEL: isolerar testet från externa beroenden.
+
     private class FakeOrders : IOrderApiService
     {
+
+        // Hämtare: uppdatera vilka beställare som kan hämta maten.
         public Task<DailyOrderList> SetCollectorAsync(int restaurantId, int id, CollectorInput input)
         { Existing.CanCollect = input.CanCollect; return GetTodayAsync(restaurantId); }
+
+        // Historik: avsluta dagen och spara en ögonblicksbild.
         public async Task<DailyOrderList> CompleteAsync(int restaurantId, CompleteDayInput input)
         { Completed = true; return await GetTodayAsync(restaurantId); }
         public bool Completed;

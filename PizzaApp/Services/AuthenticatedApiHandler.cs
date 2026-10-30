@@ -1,3 +1,5 @@
+// HTTP-hanterare: lägg till åtkomsttoken på API-anrop.
+
 using System.Net;
 using System.Net.Http.Headers;
 

@@ -1,4 +1,6 @@
-﻿namespace PizzaApp.Api.Models
+// Restauranguppgifter och flaggan som skiljer pizzeria från övrig lunch.
+
+namespace PizzaApp.Api.Models
 {
     public class Restaurant
     {

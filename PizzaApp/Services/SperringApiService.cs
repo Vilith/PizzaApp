@@ -1,3 +1,5 @@
+// HTTP-anrop för originalmeny, veckomenyer och återkommande rätter.
+
 using System.Net.Http.Json;
 using PizzaApp.Shared;
 
@@ -5,6 +7,8 @@ namespace PizzaApp.Services;
 
 public interface ISperringApiService
 {
+    Task<SperringMenuImage?> GetWebsiteMenuImageAsync() => Task.FromResult<SperringMenuImage?>(null);
+    Task<SperringWebsiteMenu> GetWebsiteMenuAsync() => Task.FromResult(new SperringWebsiteMenu([]));
     Task<SperringPage> GetAsync();
     Task SaveAsync(SperringMenu menu);
     Task SaveRegularAsync(SperringRegularInput input) => throw new NotSupportedException();
@@ -13,6 +17,14 @@ public interface ISperringApiService
 
 public class SperringApiService(HttpClient http) : ISperringApiService
 {
+    public async Task<SperringMenuImage?> GetWebsiteMenuImageAsync() =>
+        await http.GetFromJsonAsync<SperringMenuImage>("api/sperring/website-menu-image")
+        ?? throw new HttpRequestException("Menybilden kunde inte hämtas.");
+
+    public async Task<SperringWebsiteMenu> GetWebsiteMenuAsync() =>
+        await http.GetFromJsonAsync<SperringWebsiteMenu>("api/sperring/website-menu")
+        ?? throw new HttpRequestException("Originalmenyn kunde inte hämtas.");
+
     public async Task<SperringPage> GetAsync() => await http.GetFromJsonAsync<SperringPage>("api/sperring")
         ?? throw new HttpRequestException("Menyerna kunde inte hämtas.");
     public async Task SaveAsync(SperringMenu menu)

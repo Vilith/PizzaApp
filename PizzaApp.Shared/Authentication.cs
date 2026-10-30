@@ -1,3 +1,5 @@
+// Gemensamma kontrakt för inloggningskonfiguration och användarprofil.
+
 namespace PizzaApp.Shared;
 
 public record AuthConfiguration(string Url, string PublishableKey);

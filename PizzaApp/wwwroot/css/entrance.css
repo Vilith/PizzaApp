@@ -1,3 +1,5 @@
+/* Entréanimationens scen, dörrar och övergångar. */
+
 :root { --entrance-bricks: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='80' viewBox='0 0 160 80'%3E%3Cpath fill='%238b513d' d='M0 0h160v80H0z'/%3E%3Cpath fill='%23985e47' d='M2 3h75v34H2zM82 43h75v34H82z'/%3E%3Cpath fill='%237c4636' d='M82 3h75v34H82zM2 43h75v34H2z'/%3E%3Cpath stroke='%23b49478' stroke-width='3' fill='none' d='M0 0h160M0 40h160M0 80h160M80 0v40M0 40v40M160 40v40'/%3E%3Cpath stroke='%235e372a' opacity='.55' d='M3 5h72M83 45h72M83 5h72M3 45h72'/%3E%3C/svg%3E"); }
 .entrance-running { overflow: hidden; }
 .entrance[hidden] { display: none; }
@@ -68,10 +70,15 @@
 .entrance-playing .entrance-door { animation: entrance-open 2s .6s cubic-bezier(.3, 0, .2, 1) both; }
 .entrance-playing .entrance-scene { animation: entrance-walk 2.8s 1.8s cubic-bezier(.55, 0, .3, 1) both; }
 .entrance-playing .entrance-caption { animation: entrance-caption-out .6s 1.8s both; }
+/* ANIMATION: nyckelbilder för rörelsen nedan. */
 @keyframes entrance-open { from { transform: rotateY(0); } to { transform: rotateY(-105deg); } }
+/* ANIMATION: nyckelbilder för rörelsen nedan. */
 @keyframes entrance-walk { from { transform: scale(1); } to { transform: scale(8); } }
+/* ANIMATION: nyckelbilder för rörelsen nedan. */
 @keyframes entrance-reveal { 0%, 83% { opacity: 1; } 100% { opacity: 0; } }
+/* ANIMATION: nyckelbilder för rörelsen nedan. */
 @keyframes entrance-caption-out { to { opacity: 0; } }
+/* RESPONSIVT: skärmstorlek, utskrift eller minskad rörelse. */
 @media (max-height: 500px) {
     .entrance-sign { bottom: auto; top: 12%; padding: 8px; }
     .entrance-sign strong { font-size: 27px; }
@@ -79,6 +86,7 @@
     .entrance-doorway { top: 39%; height: 65%; }
     .entrance-caption { bottom: 12px; font-size: 13px; }
 }
+/* RESPONSIVT: skärmstorlek, utskrift eller minskad rörelse. */
 @media (prefers-reduced-motion: reduce) {
     .entrance { display: none; }
     .entrance, .entrance * { animation: none !important; }

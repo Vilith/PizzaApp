@@ -1,4 +1,6 @@
-﻿using System;
+// Klientmodell för restaurang och beställningsregler.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

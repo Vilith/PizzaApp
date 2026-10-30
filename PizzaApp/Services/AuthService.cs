@@ -1,3 +1,5 @@
+// Klientsession: inloggning, tokenförnyelse, profil och kontohantering.
+
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -10,6 +12,7 @@ namespace PizzaApp.Services;
 // browser storage. Reloading or closing the browser tab requires signing in again.
 public sealed class AuthService(IHttpClientFactory clients) : IAuthService
 {
+    // 1. SESSIONSTILLSTÅND: håll token i minnet och serialisera sessionsändringar.
     private readonly SemaphoreSlim gate = new(1, 1);
     private AuthConfiguration? config;
     private TokenResponse? tokens;
@@ -18,6 +21,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
     public SignedInUser? User { get; private set; }
     public event Action? Changed;
 
+    // 2. INLOGGNING: verifiera alias och skapa session.
     public async Task SignInAsync(string alias, string password)
     {
         await gate.WaitAsync();
@@ -50,6 +54,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         finally { gate.Release(); }
     }
 
+    // 3. TOKENFÖRNYELSE: använd befintlig token eller begär en ny före utgångstid.
     public async Task<string?> GetAccessTokenAsync()
     {
         await gate.WaitAsync();
@@ -115,6 +120,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         return await response.Content.ReadFromJsonAsync<SignedInUser>() ?? throw new AuthException("Inloggningssvaret kunde inte läsas.");
     }
 
+    // 4. UTLOGGNING: avsluta session och rensa användaruppgifter.
     public async Task SignOutAsync()
     {
         await gate.WaitAsync();
@@ -134,6 +140,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         finally { gate.Release(); }
     }
 
+    // 5. PROFIL: uppdatera alias och bild samt läs senaste användardata.
     public async Task UpdateProfileAsync(ProfileInput input)
     {
         await GetAccessTokenAsync();
@@ -196,6 +203,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
 
     private sealed class ProfileProblem { public string? Detail { get; set; } }
 
+    // 6. REGISTRERING: start och aktivering av konto via API.
     public Task RegisterAsync(RegistrationInput input) => RegistrationRequestAsync("start", input);
     public Task ActivateRegistrationAsync(RegistrationInput input) => RegistrationRequestAsync("activate", input);
 
@@ -216,6 +224,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         response.EnsureSuccessStatusCode();
     }
 
+    // 7. LÖSENORD: lista konton, återställ eller ändra lösenord.
     public async Task<List<PasswordAccount>> GetPasswordAccountsAsync()
     {
         using var response = await PasswordRequest(HttpMethod.Get, "accounts", null);
@@ -270,6 +279,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
         }
     }
 
+    // 8. HTTP OCH STÄDNING: rensa session och bygg autentiserade anrop.
     public void ClearSession()
     {
         Interlocked.Increment(ref sessionVersion);

@@ -4,11 +4,46 @@ Blazor WebAssembly-webbapp på .NET 10 med två restauranger och en separat best
 
 Inloggning krävs. Se [AUTH_SETUP.md](AUTH_SETUP.md) för Supabase-konfiguration, användarkonton, adminroller och databasbehörigheter före publicering.
 
-## Flöde
+## Hitta och ändra i koden
+
+Projektets egen källkod har sektionskommentarer på svenska. Små modellfiler har en inledande beskrivning; större sidor och tjänster har kommentarer vid respektive ansvarsområde. Genererade migrationer och Bootstrap ändras inte för dokumentationens skull.
+
+| Område | Var koden finns |
+| --- | --- |
+| Sidor och formulär | `PizzaApp/Components/Pages/*.razor` |
+| Sidornas färger, avstånd och storlekar | Tillhörande `*.razor.css` |
+| Gemensamt tema | `PizzaApp/wwwroot/css/app.css` |
+| Fokus, scrollning och entréanimation | `PizzaApp/wwwroot/js/` samt `wwwroot/css/entrance.css` |
+| Klientens API-anrop och inloggning | `PizzaApp/Services/` |
+| API-rutter och behörighetskrav | `PizzaApp.Api/Controllers/` |
+| Beställningsregler och extern menyhämtning | `PizzaApp.Api/Services/` |
+| Databasens schema och startdata | `PizzaApp.Api/Data/PizzaDbContext.cs` |
+| Delade kontrakt och valideringsregler | `PizzaApp.Shared/` |
+| Regressionstester och testdubblar | `PizzaApp.Tests/` |
+| Serverns tjänster och HTTP-pipeline | `PizzaApp.Api/Program.cs` |
+
+Sperrings originalmeny visas som en automatiskt skapad PNG-skärmbild av `https://www.sperringsmat.se/lunch-meny`. Playwright/Chromium öppnar originalet på servern och fotograferar menyområdet med veckor, sallader och pastarätter. Bilden behåller originalets utseende och har ingen iframe, fast höjd eller egen scrollruta. Den kan även laddas ner med **Ladda ner PNG**. En utfällbar textversion finns för tillgänglighet och som reserv om bilden inte går att hämta.
+
+Första besöket skapar bilden. Alla besökare delar sedan samma bild i serverns minne. Första besöket efter sex timmar uppdaterar den automatiskt; intervallet styrs av `SperringScreenshot:RefreshMinutes` (miljövariabel `SperringScreenshot__RefreshMinutes`). Samtidiga besök startar bara en hämtning. Vid fel behålls senaste bilden, märks som äldre och ett nytt försök tillåts efter 15 minuter. Efter serveromstart behövs en ny hämtning. Serverns cache är alltså inte en permanent bildlagring.
+
+I `SperringMenuPage.razor.css` styr sektion 1 dagsknapparnas textstorlek, padding och minsta höjd. Sektion 5 styr återkommande knappar och sektion 12 håller de två dagsvalen på samma rad. Sektion 14 har `--source-menu-image-width: 520px`, ungefär halv skala för menybilden. Ändra värdet för större eller mindre bild; höjden anpassas automatiskt och bilden ryms även på mobil. `--source-menu-font-size: 13.5px` styr den valfria textversionen.
+
+För lokal körning av PNG-hämtningen, bygg API-projektet och installera dess Chromium en gång (och igen efter byte av Playwright-version):
+
+```powershell
+dotnet build PizzaApp.Api
+pwsh PizzaApp.Api/bin/Debug/net10.0/playwright.ps1 install chromium --only-shell
+```
+
+Alternativt kan en redan installerad webbläsare användas med `SperringScreenshot__BrowserChannel=msedge`. Dockerfile installerar rätt Chromium och Linux-beroenden under bygget via `--install-menu-browser`; servern behöver därför byggas om vid denna ändring. Docker kan inte provköras i den lokala miljön. Se [Playwrights browserinstallation](https://playwright.dev/dotnet/docs/browsers) för plattformsdetaljer.
+
+JSON-filer får inga kommentarer eftersom flera läsare kräver strikt JSON: `global.json` väljer SDK, `launchSettings.json` innehåller lokala startprofiler och `appsettings*.json` innehåller serverinställningar. Hemligheter hör hemma i User Secrets eller miljövariabler, se `AUTH_SETUP.md`. Projektfilerna (`.csproj`) och `Dockerfile` har egna kommentarer om bygginställningar och beroenden.
+
+## Användarflöde
 
 - Välj **Skapa konto**, ange nick, e-post och lösenord. Kontot blir klart direkt, utan mejlkod eller administratörsgodkännande. Logga in med ditt alias och lösenord. Äldre konton utan profil väljer nick via Slutför befintligt konto. Välj därefter Pizzeria (Kvänum Pizzeria) eller À la carte (Sperring).
 - Pizzeria: välj rätt via menyflikarna (pizzor 1–12, 13–24, 25–33, 34–43 samt Sallader, Kebab och Stekrätter). Ditt val centreras automatiskt. Första tillgängliga såsen i ingredienslistan förväljs, annars Ingen sås; valet kan ändras. Såser: Vitlökssås, Bearnaisesås, Kebabsås, Kebabsås (Mixad) och Kebabsås (Stark). Drycker: Coca-Cola 33cl, Fanta 33cl, Sprite 33cl och Pepsi Max 33cl. Välj dryck och antal.
-- Sperring: två veckomenyer, måndag–fredag, med dagens beställningslista längst ner. Välj en rätt under dagens datum och ange antal och eventuell kommentar. Listan visar alias, beställd maträtt och profilbild när sådan finns. Nästa veckas meny är till för planering; beställningar gäller dagens svenska datum.
+- Sperring: originalmenyn visas direkt över två veckors dagsval, måndag–fredag. Välj Dagens rätt, Dagens sallad eller en återkommande rätt under önskat datum och ange antal och eventuell kommentar. Listan visar alias, beställd maträtt och profilbild när sådan finns. Beställningar kan göras i förväg för vardagarna i de visade veckorna.
 - Admin kan redigera Sperrings år, veckonummer, återkommande rätter och extra rätter per vardag. Skriv en rätt per rad. Återkommande rätter visas alla fem vardagar. Menyer sparas separat; samma vecka får inte användas i båda menyerna. Veckonumren flyttas fram manuellt. Samtidiga ändringar skyddas med revisioner; ladda om innan du försöker spara en inaktuell meny igen.
 - Ditt profilnamn används automatiskt; du behöver inte fylla i namn vid beställning. Kommentar är valfri. Under **Inställningar** kan du ändra nick samt välja eller ta bort en profilbild. Nya beställningar får det nya namnet; redan sparade beställningar och historiken behåller sitt ursprungliga namn.
 - ”Att ringa in” visar beställarnas namn med kryssrutor för vilka som kan hämta. Samma konto och namn visas en gång; olika konton hålls isär även om namnet är samma. Namnlösa beställningar behöver ett namn innan de kan väljas som hämtare.

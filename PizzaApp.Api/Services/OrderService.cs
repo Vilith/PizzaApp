@@ -1,3 +1,5 @@
+// Beställningsregler: datum, deadline, behörighet, samtidighet och avslutade dagar.
+
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +14,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
 {
     private static readonly TimeZoneInfo Stockholm = TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm");
 
+    // Datum: använd svensk tidszon för dagslista och deadline.
     private (DateOnly Date, bool Passed) CurrentDay()
     {
         var local = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), Stockholm);
@@ -22,14 +25,17 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         await db.Restaurants.AsNoTracking().SingleOrDefaultAsync(r => r.Id == id)
         ?? throw new OrderException(404, "Restaurangen finns inte.");
 
+    // Deadline: kontrollera om restaurangen tar emot beställningar.
     private void CheckDeadline(Restaurant restaurant, bool passed)
     {
         if (restaurant.IsPizzeria && passed && options.Value.LockAfterDeadline)
             throw new OrderException(409, "Beställningarna är låsta efter kl. 11:15. Uppdatera listan.");
     }
 
+    // Dagslista: läs beställningar och status för önskat datum.
     public Task<DailyOrderList> GetTodayAsync(int restaurantId) => GetDayAsync(restaurantId);
 
+    // Dagslista: läs beställningar och status för önskat datum.
     public async Task<DailyOrderList> GetDayAsync(int restaurantId, DateOnly? requested = null)
     {
         var restaurant = await RestaurantAsync(restaurantId);
@@ -154,15 +160,19 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
 
     // All writers acquire the same database row lock, including completion. This also
     // serializes inserts, which an order's own concurrency token cannot protect.
+
+    // Samtidighet: serialisera ändringar för samma restaurang.
     private async Task LockRestaurantAsync(int restaurantId) =>
         await db.Restaurants.Where(r => r.Id == restaurantId).ExecuteUpdateAsync(s => s.SetProperty(r => r.Name, r => r.Name));
 
+    // Låsning: stoppa ändringar av en avslutad dag.
     private async Task CheckCompletedAsync(int restaurantId, DateOnly date)
     {
         if (await db.CompletedOrderDays.AnyAsync(d => d.RestaurantId == restaurantId && d.Date == date))
             throw new OrderException(409, "Dagens beställning är hämtad och sparad i historiken. Uppdatera listan.");
     }
 
+    // Hämtare: uppdatera vilka beställare som kan hämta maten.
     public async Task<DailyOrderList> SetCollectorAsync(int restaurantId, int id, CollectorInput input)
     {
         await using var transaction = await db.Database.BeginTransactionAsync();
@@ -185,6 +195,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         return await GetTodayAsync(restaurantId);
     }
 
+    // Historik: avsluta dagen och spara en ögonblicksbild.
     public async Task<DailyOrderList> CompleteAsync(int restaurantId, CompleteDayInput input)
     {
         if (!user.IsAdmin) throw new OrderException(403, "Endast administratörer får avsluta dagens beställning.");
@@ -224,6 +235,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         return await GetTodayAsync(restaurantId);
     }
 
+    // Behörighet: kontrollera ägare, datum och revision före ändring.
     private async Task<PizzaOrder> EditableAsync(int restaurantId, int id, DateOnly date, Guid revision)
     {
         var order = await db.Orders.SingleOrDefaultAsync(o => o.Id == id && o.RestaurantId == restaurantId && o.OrderDate == date)
@@ -235,6 +247,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         return order;
     }
 
+    // Lagring: spara ändringar och hantera samtidighetsfel.
     private async Task PersistAsync()
     {
         try { await db.SaveChangesAsync(); }

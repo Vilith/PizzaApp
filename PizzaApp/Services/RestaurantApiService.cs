@@ -1,4 +1,6 @@
-﻿using PizzaApp.Models;
+// HTTP-anrop för restauranglista och menyrätter.
+
+using PizzaApp.Models;
 using System.Net.Http.Json;
 using MenuItemModel = PizzaApp.Models.MenuItem;
 

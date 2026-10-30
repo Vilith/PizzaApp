@@ -1,3 +1,5 @@
+// HTTP-anrop för årsstatistik och topplistor.
+
 using System.Net.Http.Json;
 using PizzaApp.Shared;
 

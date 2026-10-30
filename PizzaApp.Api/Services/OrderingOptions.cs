@@ -1,3 +1,5 @@
+// Inställningar för deadline samt fel som kan visas vid beställning.
+
 namespace PizzaApp.Api.Services;
 
 public class OrderingOptions

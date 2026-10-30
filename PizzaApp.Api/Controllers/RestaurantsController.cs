@@ -1,3 +1,5 @@
+// Restaurang-API: lista restauranger och synliga menyrätter.
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PizzaApp.Api.Data;
@@ -14,6 +16,7 @@ namespace PizzaApp.Api.Controllers
 
         public RestaurantsController(PizzaDbContext context) => _context = context;
 
+        // LÄSNING: hämta data för klienten.
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Restaurant>>> GetRestaurantsAsync()
         {
@@ -22,6 +25,7 @@ namespace PizzaApp.Api.Controllers
             return Ok(restaurants);
         }
 
+        // LÄSNING: hämta data för klienten.
         [HttpGet("{id}/menu")]
         public async Task<ActionResult<IEnumerable<MenuItem>>> GetMenuAsync(int id)
         {

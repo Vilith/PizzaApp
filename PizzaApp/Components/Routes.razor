@@ -1,3 +1,5 @@
+@* Sidnavigering, fokus efter sidbyte och hantering av okända adresser. *@
+
 <Router AppAssembly="@typeof(Routes).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
@@ -5,6 +7,8 @@
     </Found>
     <NotFound>
         <LayoutView Layout="@typeof(Layout.MainLayout)">
+
+            @* VYSEKTION: Okänd adress: visa en väg tillbaka till startsidan. *@
             <section class="alert alert-light">
                 <h1>Sidan finns inte</h1>
                 <a href="/">Till startsidan</a>

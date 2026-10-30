@@ -1,3 +1,5 @@
+/* Navigeringslänkar och öppning av menyn på små skärmar. */
+
 .navbar-toggler {
     appearance: none;
     cursor: pointer;
@@ -85,6 +87,8 @@
 .navbar-toggler:checked ~ .nav-scrollable {
     display: block;
 }
+
+/* RESPONSIVT: anpassning till skärmstorlek eller rörelseinställning. */
 
 @media (min-width: 641px) {
     .navbar-toggler {

@@ -1,3 +1,5 @@
+@* Restaurangval, pizzameny, beställningsformulär och gemensam dagslista. *@
+
 @page "/"
 @page "/pizzerian"
 @page "/sperring"
@@ -22,6 +24,8 @@ else
 {
 @if (CurrentSection == "")
 {
+
+    @* VYSEKTION: Restaurangval med dörrknappar. *@
     <section class="restaurant-lobby" aria-labelledby="lobby-heading">
     <h1 id="lobby-heading">Välj din dörr</h1>
     @if (loading)
@@ -66,6 +70,8 @@ else if (restaurant != null)
             </div>
         }
         <div class="order-grid">
+
+            @* VYSEKTION: Pizzerians meny och kategoriflikar. *@
             <section class="panel menu-panel" aria-labelledby="menu-heading">
                 <p class="eyebrow">VÄLJ DIN FAVORIT</p>
                 <h2 id="menu-heading">@(restaurant.IsPizzeria ? "Meny" : "À la carte")</h2>
@@ -97,6 +103,8 @@ else if (restaurant != null)
                     .GroupBy(item => string.IsNullOrWhiteSpace(item.Category)
                         ? (restaurant.IsPizzeria ? "Pizzor" : "À la carte") : item.Category))
                 {
+
+                    @* VYSEKTION: Menykategori med valbara rätter. *@
                     <section class="menu-category" aria-label="@group.Key">
                         @if (restaurant.IsPizzeria) { <h3>@group.Key</h3> }
                         @if (restaurant.IsPizzeria && group.Key == "Pizzor")
@@ -131,6 +139,8 @@ else if (restaurant != null)
                 }
                 </div>
             </section>
+
+            @* VYSEKTION: Vald rätt, antal och tillbehör. *@
             <section id="selection-panel" tabindex="-1" class="panel selection-panel" aria-labelledby="selection-heading">
                 @if (input == null)
                 {
@@ -176,6 +186,8 @@ else if (restaurant != null)
             </section>
         </div>
         @if (success != null) { <div class="alert alert-success" role="status">@success</div> }
+
+        @* VYSEKTION: Dagens beställningar, hämtare och summeringar. *@
         <section id="daily-list" class="panel daily-panel" aria-labelledby="daily-heading">
             <div class="list-heading">
                 <div><p class="eyebrow">@daily.Date.ToString("yyyy-MM-dd") · @restaurant.Name</p><h2 id="daily-heading">Dagens beställningslista</h2></div>
@@ -288,6 +300,7 @@ else if (restaurant != null)
 
 
 @code {
+    // SIDANS TILLSTÅND: fält, formulärmodeller och komponentparametrar.
     private string CurrentSection => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/').ToLowerInvariant();
 
     private async Task OpenRestaurant(Restaurant item)
@@ -328,6 +341,7 @@ else if (restaurant != null)
         StateHasChanged();
     });
 
+    // Städning: koppla bort händelser och frigör resurser.
     public void Dispose()
     {
         loadVersion++;
@@ -358,6 +372,7 @@ else if (restaurant != null)
 
     private static string TabId(string tab) => "tab-" + tab.Replace(' ', '-');
 
+    // Livscykel: kör DOM-beroende fokus och scrollning efter rendering.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!focusSelection) return;
@@ -374,6 +389,7 @@ else if (restaurant != null)
         }
     }
 
+    // Livscykel: läs in sidans initiala data.
     protected override async Task OnInitializedAsync()
     {
         Auth.Changed += AuthChanged;
@@ -387,6 +403,7 @@ else if (restaurant != null)
 
     private static string Extras(string? sauce, string? drink) => string.Join(" · ", new[] { sauce, drink }.Where(s => !string.IsNullOrEmpty(s)));
 
+    // 1. RESTAURANGVAL: ladda dörrarna och följ aktuell adress.
     private async Task LoadRestaurants()
     {
         if (CurrentSection == "sperring") { loading = false; return; }
@@ -413,6 +430,7 @@ else if (restaurant != null)
         finally { if (version == loadVersion) loading = false; }
     }
 
+    // 2. MENY: byt restaurang och läs dess meny och dagslista.
     private async Task SelectRestaurant(Restaurant selected)
     {
         var version = loadVersion;
@@ -431,6 +449,7 @@ else if (restaurant != null)
         finally { if (version == loadVersion) loading = false; }
     }
 
+    // 3. DAGSLISTA: hämta senaste beställningar från servern.
     private async Task LoadList()
     {
         var version = loadVersion;
@@ -451,9 +470,11 @@ else if (restaurant != null)
         finally { busy = false; }
     }
 
+    // 4. HÄMTNING: välj hämtare och avsluta dagens beställningar.
     private Task SetCollector(OrderDetails order, bool canCollect) => UpdateCollection(() =>
         OrderApiService.SetCollectorAsync(restaurant!.Id, order.Id, new(canCollect, order.Revision, daily!.Date)));
 
+    // Historik: avsluta dagen och spara en ögonblicksbild.
     private Task Complete() => UpdateCollection(() => OrderApiService.CompleteAsync(restaurant!.Id,
         new(daily!.Date, daily.Orders.ToDictionary(o => o.Id, o => o.Revision))));
 
@@ -481,6 +502,7 @@ else if (restaurant != null)
 
     private void CancelEdit() { input = null; editingId = null; }
 
+    // 5. MATVAL: förbered formulär och förvalda tillbehör.
     private void SelectItem(MenuItem item)
     {
         if (busy || daily?.IsLocked != false) return;
@@ -503,6 +525,7 @@ else if (restaurant != null)
         error = success = null;
     }
 
+    // 6. REDIGERING: kopiera en befintlig beställning till formuläret.
     private void Edit(OrderDetails order)
     {
         focusSelection = true;
@@ -511,6 +534,7 @@ else if (restaurant != null)
             Sauce = order.Sauce, Drink = order.Drink, Comment = order.Comment, Revision = order.Revision };
     }
 
+    // 7. SPARA: validera och skicka ny eller ändrad beställning.
     private async Task Save()
     {
         if (busy || input == null || restaurant == null || daily?.IsLocked != false) return;
@@ -537,6 +561,7 @@ else if (restaurant != null)
         finally { busy = false; }
     }
 
+    // 8. BORTTAGNING: bekräfta och radera vald beställning.
     private async Task Delete(OrderDetails order)
     {
         if (busy || restaurant == null || daily?.IsLocked != false) return;

@@ -1,3 +1,5 @@
+// ENTRÉ: animera restaurangvalet och återställ fokus när övergången avslutas.
+
 window.pizzaEntrance = (() => {
     let stopCurrent = () => {};
     return { play(destination) {
@@ -19,6 +21,7 @@ window.pizzaEntrance = (() => {
     const previousFocus = document.activeElement;
     stopCurrent = finish;
 
+    // AVSLUT: ta bort händelser, återställ appen och lämna tillbaka tangentbordsfokus.
     function finish() {
         if (finished) return;
         finished = true;

@@ -1,3 +1,5 @@
+@* Inloggningsformulär och växling till registrering. *@
+
 @inject IAuthService Auth
 
 
@@ -8,6 +10,7 @@
 else
 {
 
+@* VYSEKTION: Formulär för alias och lösenord. *@
 <section class="panel selection-panel" style="max-width: 440px; margin: 32px auto;" aria-labelledby="login-heading">
     <p class="eyebrow">PIZZAAPP</p>
     <h1 id="login-heading">Logga in</h1>
@@ -31,6 +34,7 @@ else
 }
 
 @code {
+    // SIDANS TILLSTÅND: fält, formulärmodeller och komponentparametrar.
     private readonly Credentials credentials = new();
     private bool busy;
     private bool registering;

@@ -1,3 +1,6 @@
+/* Återanvändbar presentation av statistikens topplistor. */
+
+/* TOPPLISTOR: placering, namn och antal. */
 .ranking { background: #fffaf0; border: 1px solid #d9c8a7; border-radius: 14px; padding: 24px; height: 100%; }
 h2 { font-size: 21px; color: #173b35; margin-bottom: 24px; }
 ol { margin: 0; padding-left: 24px; }

@@ -1,4 +1,6 @@
-﻿using PizzaApp.Models;
+// Gränssnitt för läsning av restauranger och menyrätter.
+
+using PizzaApp.Models;
 using MenuItemModel = PizzaApp.Models.MenuItem;
 
 namespace PizzaApp.Services

@@ -1,3 +1,5 @@
+// Gränssnitt för beställningar, hämtare och avslut av dagen.
+
 using PizzaApp.Shared;
 
 namespace PizzaApp.Services;

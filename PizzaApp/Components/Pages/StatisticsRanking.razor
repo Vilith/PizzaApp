@@ -1,3 +1,6 @@
+@* Återanvändbar presentation av statistikens topplistor. *@
+
+@* VYSEKTION: Återanvändbar topplista med rubrik och räknade poster. *@
 <section class="ranking" aria-label="@Title">
     <h2>@Title</h2>
     @if (Items.Count == 0) { <p>@EmptyText</p> }
@@ -15,6 +18,7 @@
 </section>
 
 @code {
+    // SIDANS TILLSTÅND: fält, formulärmodeller och komponentparametrar.
     [Parameter] public string Title { get; set; } = "";
     [Parameter] public List<RankedCount> Items { get; set; } = [];
     [Parameter] public string Unit { get; set; } = "st";

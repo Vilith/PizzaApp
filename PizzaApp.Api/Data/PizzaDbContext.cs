@@ -1,3 +1,5 @@
+// Databaskonfiguration: tabeller, relationer, aliasnycklar och startdata.
+
 using Microsoft.EntityFrameworkCore;
 using PizzaApp.Api.Models;
 
@@ -9,6 +11,7 @@ namespace PizzaApp.Api.Data
             : base(options)
         { }
 
+        // 1. TABELLER: beställningar, profiler, historik, restauranger och menyer.
         public DbSet<PizzaOrder> Orders => Set<PizzaOrder>();
         public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
         public DbSet<CompletedOrderDay> CompletedOrderDays => Set<CompletedOrderDay>();
@@ -17,6 +20,7 @@ namespace PizzaApp.Api.Data
         public DbSet<MenuItem> MenuItems => Set<MenuItem>();
         public DbSet<SperringWeek> SperringWeeks => Set<SperringWeek>();
 
+        // 2. ALIAS: skapa samma söknyckel oavsett skiftläge och omgivande blanksteg.
         public static string NormalizeAlias(string alias) => alias.Trim().ToUpperInvariant();
 
         private void PrepareAliases()
@@ -31,6 +35,7 @@ namespace PizzaApp.Api.Data
         public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
         { PrepareAliases(); return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken); }
 
+        // 3. SCHEMA OCH STARTDATA: nycklar, relationer, revisioner och grundmeny.
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

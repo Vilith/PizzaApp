@@ -1,348 +1,459 @@
-.sperring { 
-    max-width: 1080px; 
-    margin: 0 auto; 
-    padding: 16px 12px 64px; 
-    color: black; 
+/* 1. SIDANS RAM OCH DAGSKNAPPARNAS STORLEK
+   Ändra de tre variablerna nedan:
+   font-size  = textstorlek
+   padding    = inre luft: höjdled och sidled
+   min-height = minsta höjd
+   Bredden är hälften av raden och styrs i sektion 12. */
+.sperring {
+    --daily-button-font-size: 1.1rem;
+    --daily-button-padding: 14px 16px;
+    --daily-button-min-height: 52px;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 16px 12px 64px;
+    color: black;
 }
 
-.sperring-header { 
-    padding: 12px 0 32px; 
+/* 2. Sidhuvud och rubriker. */
+.sperring-header {
+    padding: 12px 0 32px;
 }
 
-h1 { 
-    font-size: clamp(2.4rem, 6vw, 4.3rem); 
-    letter-spacing: -.05em; 
-    margin: 10px 0; 
-
+h1 {
+    font-size: clamp(2.4rem, 6vw, 4.3rem);
+    letter-spacing: -.05em;
+    margin: 10px 0;
 }
 
-h2 { 
-    font-size: 1.6rem; 
-    margin: 0; 
-
-} 
-
-h3 { 
-    font-size: 1rem; 
-    margin: 0 0 5px; 
-
+h2 {
+    font-size: 1.6rem;
+    margin: 0;
 }
 
-.eyebrow { 
-    font-size: .72rem; 
-    font-weight: 800; 
-    letter-spacing: .14em; 
-    margin: 14px 0 6px; 
-
+h3 {
+    font-size: 1rem;
+    margin: 0 0 5px;
 }
 
-button { 
-    border: 1px solid #ccd6cc; 
-    border-radius: 8px; 
-    background: #fff; 
-    color: #243c35; 
-    padding: 10px 14px; 
-    font: inherit; 
-    cursor: pointer; 
+.eyebrow {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .14em;
+    margin: 14px 0 6px;
+}
 
+/* 3. Grundutseende för alla knappar och tangentbordsfokus. */
+button {
+    border: 1px solid #ccd6cc;
+    border-radius: 8px;
+    background: #fff;
+    color: #243c35;
+    padding: 10px 14px;
+    font: inherit;
+    cursor: pointer;
 }
 
 button:hover {
     background: #eef3e9;
+}
 
-} 
-
-button:disabled { 
-    opacity: .55; 
-    cursor: default; 
-
+button:disabled {
+    opacity: .55;
+    cursor: default;
 }
 
 button:focus-visible, input:focus-visible, textarea:focus-visible {
-    outline: 3px solid #b36b27; 
-    outline-offset: 3px; 
-
+    outline: 3px solid #b36b27;
+    outline-offset: 3px;
 }
 
-.back { 
-    border: 0; 
-    padding-left: 0; 
-    background: transparent; 
-
-}
-
-.week-card, .orders, .selection { 
-    background: #fffdf8; 
-    border: 1px solid #d5ddcf; 
-    border-radius: 16px; 
-    margin-bottom: 28px; 
-    overflow: hidden; 
-
-}
-
-.week-heading { 
-    padding: 24px 28px; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    gap: 16px;
-    background: #f1f3e8; 
-
-}
-
-.week-heading .eyebrow { 
-    margin-top: 0; 
-
-}
-
-.day-row { 
-    padding: 22px 28px; 
-    display: grid; 
-    grid-template-columns: 130px 1fr;
-    gap: 20px; 
-    border-top: 1px solid #e2e6dc; 
-
-}
-
-.day-row.today { 
-    background: #eef4e6; 
-    border-left: 4px solid #4a6949; 
-    padding-left: 24px; 
-
-}
-
-.day-label span, .muted, small { 
-    color: #627167; 
-    font-size: .9rem; 
-
-}
-
-.dishes { 
-    display: flex; 
-    flex-wrap: wrap; 
-    gap: 8px; 
-
-}
-
-.dish { 
-    font-size: .95rem; 
-    border: 1px solid #dbe1d4; 
-    border-radius: 7px; 
-    padding: 9px 12px; 
-    background: white; 
-
-}
-
-.dish.static { 
-    background: transparent; 
-    border-color: transparent; 
-    padding: 4px 8px 4px 0; 
-
-}
-
-.dish.selected { 
-    border-color: #37543c; 
-    background: #dde9d5; 
-
-}
-
-.dish span { 
-    padding-left: 10px; 
-
-}
-
-.selection, .editor { 
-    padding: 24px 28px; 
-
-}
-
-fieldset { 
+.back {
     border: 0;
-    padding: 0; 
-
-} 
-
-label { 
-    display: block; 
-    font-weight: 600; 
-    margin: 16px 0; 
-
+    padding-left: 0;
+    background: transparent;
 }
 
-input, textarea { 
-    display: block; 
-    width: 100%; 
-    border: 1px solid #aebcab; 
+/* 4. Veckokort, datum och markering av dagens rad. */
+.week-card, .orders, .selection {
+    background: #fffdf8;
+    border: 1px solid #d5ddcf;
+    border-radius: 16px;
+    margin-bottom: 28px;
+    overflow: hidden;
+}
+
+.week-heading {
+    padding: 24px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    background: #f1f3e8;
+}
+
+.week-heading .eyebrow {
+    margin-top: 0;
+}
+
+.day-row {
+    padding: 22px 28px;
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 20px;
+    border-top: 1px solid #e2e6dc;
+}
+
+.day-row.today {
+    background: #eef4e6;
+    border-left: 4px solid #4a6949;
+    padding-left: 24px;
+}
+
+.day-label span, .muted, small {
+    color: #627167;
+    font-size: .9rem;
+}
+
+/* 5. Maträttsknappar: font-size och padding i .dish styr återkommande rätters storlek. */
+.dishes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.dish {
+    font-size: .95rem;
+    border: 1px solid #dbe1d4;
+    border-radius: 7px;
+    padding: 9px 12px;
+    background: white;
+}
+
+.dish.static {
+    background: transparent;
+    border-color: transparent;
+    padding: 4px 8px 4px 0;
+}
+
+.dish.selected {
+    border-color: #37543c;
+    background: #dde9d5;
+}
+
+.dish span {
+    padding-left: 10px;
+}
+
+/* 6. Beställningsformulär och adminfält. */
+.selection, .editor {
+    padding: 24px 28px;
+}
+
+fieldset {
+    border: 0;
+    padding: 0;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    margin: 16px 0;
+}
+
+input, textarea {
+    display: block;
+    width: 100%;
+    border: 1px solid #aebcab;
     border-radius: 7px;
     padding: 10px;
-    margin-top: 6px; 
-    font: inherit; 
+    margin-top: 6px;
+    font: inherit;
     background: white;
-
 }
 
-textarea { 
-    resize: vertical; 
-
+textarea {
+    resize: vertical;
 }
 
-.week-fields { 
-    display: flex; 
-    gap: 20px; 
-
+.week-fields {
+    display: flex;
+    gap: 20px;
 }
 
 .week-fields input {
-    max-width: 160px; 
-
+    max-width: 160px;
 }
 
-.actions { 
-    display: flex; 
-    flex-wrap: wrap; 
-    gap: 10px; 
-    margin-top: 18px; 
-
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
 }
 
-.primary { 
-    color: white; 
+.primary {
+    color: white;
     background: #36563d;
-
 }
 
-.primary:hover { 
+.primary:hover {
     background: #29442f;
-
 }
 
+/* 7. Beställningslistans kolumner, användarbilder och kommentarer. */
 .orders > .muted, .orders > p {
-    margin: 20px 28px; 
-
+    margin: 20px 28px;
 }
 
-.order-head, .order-row { 
-    display: grid; 
-    grid-template-columns: minmax(130px, 1fr) minmax(150px, 2fr) auto; 
-    gap: 20px; 
-    padding: 18px 28px; 
-    align-items: center; 
-    border-top: 1px solid #e2e6dc; 
-
+.order-head, .order-row {
+    display: grid;
+    grid-template-columns: minmax(130px, 1fr) minmax(150px, 2fr) auto;
+    gap: 20px;
+    padding: 18px 28px;
+    align-items: center;
+    border-top: 1px solid #e2e6dc;
 }
 
-.order-head { 
+.order-head {
     font-size: .8rem;
     font-weight: 700;
-
 }
 
-.person { 
-    display: flex; 
-    align-items: center; 
-    gap: 12px; 
-    overflow-wrap: anywhere; 
-
+.person {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow-wrap: anywhere;
 }
 
-.person img, .avatar { 
-    width: 40px; 
-    height: 40px; 
-    flex-shrink: 0; 
-    border-radius: 50%; 
-    object-fit: cover; 
-
+.person img, .avatar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
-.avatar { 
-    display: grid; 
-    place-items: center; 
+.avatar {
+    display: grid;
+    place-items: center;
     background: #e2eadb;
-
 }
 
-small { 
-    display: block; 
+small {
+    display: block;
     margin-top: 4px;
-    }
+}
 
-.notice { 
-    border-radius: 8px; 
+/* 8. Meddelanden och fel. */
+.notice {
+    border-radius: 8px;
     padding: 16px;
     background: #e4eddc;
-
 }
 
-.error { 
-    background: #fbe8dd; 
-    color: #8c341f; 
-
+.error {
+    background: #fbe8dd;
+    color: #8c341f;
 }
 
-@media(max-width: 600px) { 
-    
-    .week-heading { 
-        padding: 20px 16px; 
-        flex-wrap: wrap; 
-
+/* 9. Mobilanpassning av kort, formulär och beställningslista. */
+@media(max-width: 600px) {
+    .week-heading {
+        padding: 20px 16px;
+        flex-wrap: wrap;
     }
-    
-    .day-row { 
+
+    .day-row {
         grid-template-columns: 1fr;
         gap: 10px;
-        padding: 18px 16px; 
-
+        padding: 18px 16px;
     }
-    
-    .day-row.today { 
+
+    .day-row.today {
         padding-left: 12px;
-
     }
-    
-    .order-head, .order-row { 
-        padding: 16px; 
+
+    .order-head, .order-row {
+        padding: 16px;
         gap: 12px;
         grid-template-columns: 1fr 1.4fr;
-
     }
-    
-    .order-row > button { 
-        grid-column: 2; 
-        justify-self: start; 
 
+    .order-row > button {
+        grid-column: 2;
+        justify-self: start;
     }
-    
-    .selection, .editor { 
+
+    .selection, .editor {
         padding: 20px 16px;
-
     }
-    
+
     .person {
         gap: 7px;
-
     }
-    
-    .person img, .avatar {
-        width: 30px; 
-        height: 30px; 
 
-    } 
+    .person img, .avatar {
+        width: 30px;
+        height: 30px;
+    }
 
 }
-.day-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 20px 28px 0; }
-.day-tabs .active { background: #36563d; color: white; border-color: #36563d; }
-.minimum { padding: 16px; background: #fff0d6; border-radius: 8px; color: #6b4717; }
-.minimum.reached { background: #e4eddc; color: #29442f; }
-.current-week { text-align: center; font-size: 1.2rem; font-weight: 700; }
-.day-tabs { justify-content: center; }
-.regular-editor { padding: 24px 28px; margin-bottom: 28px; background: #fffdf8; border: 1px solid #d5ddcf; border-radius: 16px; }
-.regular-dish-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; margin: 6px 0; }
-.regular-dish-row input { margin: 0; min-width: 0; }
-.day-menu { min-width: 0; }
-.dish-group-label { margin: 0 0 8px; font-size: .8rem; font-weight: 700; color: #627167; }
-.daily-dishes .dishes { flex-direction: column; }
-.daily-dishes .dish { width: 100%; text-align: left; font-size: 1.1rem; font-weight: 650; line-height: 1.6; padding: 14px 16px; white-space: normal; overflow-wrap: anywhere; background: #f1f3e8; border-color: #bcccb2; }
-.daily-dishes .dish.selected { background: #dde9d5; border-color: #37543c; }
-.daily-dishes .dish.static { color: #243c35; }
-.regular-dishes { margin-top: 18px; padding-top: 14px; border-top: 1px solid #e2e6dc; }
-.regular-dishes .dish { line-height: 1.5; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+
+/* 10. Val av beställningsdag och status för minimiantal. */
+.day-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 20px 28px 0;
+}
+
+.day-tabs .active {
+    background: #36563d;
+    color: white;
+    border-color: #36563d;
+}
+
+.minimum {
+    padding: 16px;
+    background: #fff0d6;
+    border-radius: 8px;
+    color: #6b4717;
+}
+
+.minimum.reached {
+    background: #e4eddc;
+    color: #29442f;
+}
+
+.current-week {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.day-tabs {
+    justify-content: center;
+}
+
+/* 11. Admin: redigering av återkommande rätter. */
+.regular-editor {
+    padding: 24px 28px;
+    margin-bottom: 28px;
+    background: #fffdf8;
+    border: 1px solid #d5ddcf;
+    border-radius: 16px;
+}
+
+.regular-dish-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    margin: 6px 0;
+}
+
+.regular-dish-row input {
+    margin: 0;
+    min-width: 0;
+}
+
+/* 12. Dagsval: två lika breda kolumner håller Dagens rätt och Dagens sallad på samma rad. Storleken styrs av variablerna i sektion 1. */
+.day-menu {
+    min-width: 0;
+}
+
+.dish-group-label {
+    margin: 0 0 8px;
+    font-size: .8rem;
+    font-weight: 700;
+    color: #627167;
+}
+
+.daily-dishes .dishes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.daily-dishes .dish {
+    width: 100%;
+    text-align: left;
+    font-size: var(--daily-button-font-size);
+    font-weight: 650;
+    line-height: 1.6;
+    padding: var(--daily-button-padding);
+    min-height: var(--daily-button-min-height);
+    box-sizing: border-box;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    background: #f1f3e8;
+    border-color: #bcccb2;
+}
+
+.daily-dishes .dish.selected {
+    background: #dde9d5;
+    border-color: #37543c;
+}
+
+.daily-dishes .dish.static {
+    color: #243c35;
+}
+
+/* 13. Återkommande rätter under dagsvalen. */
+.regular-dishes {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #e2e6dc;
+}
+
+.regular-dishes .dish {
+    line-height: 1.5;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* 14. Originalmenyn visas som PNG utan egen scrollruta.
+   Bildbredden 520px är ungefär halv skala för originalets menyområde.
+   Ändra --source-menu-image-width för att göra hela bilden större eller mindre.
+   --source-menu-font-size gäller bara den valfria textversionen. */
+.source-menu {
+    --source-menu-image-width: 520px;
+    --source-menu-font-size: 13.5px;
+    margin-bottom: 2rem;
+}
+
+.source-menu-image {
+    display: block;
+    width: min(100%, var(--source-menu-image-width));
+    height: auto;
+    margin: 0 auto;
+}
+
+.source-menu-updated {
+    text-align: center;
+    color: #627167;
+    font-size: .85rem;
+}
+
+.source-menu-text summary {
+    cursor: pointer;
+    margin: 1rem 0;
+}
+
+.source-menu-content {
+    font-size: var(--source-menu-font-size);
+    line-height: 1.6;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.source-menu-content h2 {
+    font-size: 1.4em;
+    margin: 1.5em 0 .75em;
+}
+
+.source-menu-content p {
+    margin: .35em 0;
+}

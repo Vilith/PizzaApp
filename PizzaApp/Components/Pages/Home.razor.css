@@ -1,8 +1,12 @@
+/* Restaurangval, pizzameny, beställningsformulär och gemensam dagslista. */
+
 h1 { font-size: clamp(27px, 3.5vw, 38px); font-weight: 750; letter-spacing: -.8px; margin-bottom: 12px; }
 .statistics-teaser { display: block; width: fit-content; max-width: 100%; margin: 24px auto 0; padding: 10px 16px; border: 1px solid #d9c8a7; border-radius: 999px; background: linear-gradient(110deg, #fffaf0, #f4dfad, #e6ead5, #fffaf0); background-size: 300% 100%; color: #173b35; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; animation: statistics-glow 6s ease-in-out infinite; }
 .statistics-teaser:hover { color: #173b35; border-color: #96713e; }
 .statistics-teaser:focus-visible { outline: 3px solid #f4dfad; outline-offset: 4px; }
+/* ANIMATION: nyckelbilder för rörelsen nedan. */
 @keyframes statistics-glow { 0%, 100% { background-position: 0% 50%; box-shadow: 0 0 0 0 #f4dfad00; } 50% { background-position: 100% 50%; box-shadow: 0 0 14px 2px #f4dfad40; } }
+/* RESPONSIVT: anpassning till skärmstorlek eller rörelseinställning. */
 @media (prefers-reduced-motion: reduce) { .statistics-teaser { animation: none; background-position: 50% 50%; } }
 h2 { font-size: 23px; font-weight: 700; margin-bottom: 20px; }
 h3 { font-size: 18px; font-weight: 700; }
@@ -17,10 +21,12 @@ h3 { font-size: 18px; font-weight: 700; }
 .page-heading h1, .page-heading .eyebrow, .restaurant-toolbar .text-button { color: #fff7e8; text-shadow: 0 1px 4px #160c09; }
 .text-button { color: #2166b4; border: 0; background: none; padding: 8px 0; font-weight: 600; font-size: 14px; }
 .text-button:hover { text-decoration: underline; }
+/* KNAPPAR: storlek, färger och interaktion. */
 button:disabled { opacity: .5; cursor: not-allowed; }
 .deadline { background: #eaf2fc; border: 1px solid #d2e2f5; border-left: 4px solid #377dca; border-radius: 8px; padding: 16px 20px; display: flex; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 24px; font-size: 14px; color: #325680; }
 .deadline-late { background: #fff6e6; border-color: #edcf97; color: #71541e; }
 .order-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; margin-bottom: 28px; }
+/* PANELER: innehållets ram och avstånd. */
 .panel { background: white; border: 1px solid #dce4ed; border-radius: 14px; padding: 26px; }
 .menu-list { display: flex; flex-direction: column; gap: 10px; }
 .lunch-notice { background: #eaf2fc; border-left: 4px solid #377dca; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; color: #325680; font-weight: 600; }
@@ -50,6 +56,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .summary-row { display: flex; flex-direction: column; padding: 12px 0; border-top: 1px solid #d8e4f3; gap: 4px; }
 .summary-row > span { font-size: 14px; color: #47617e; }
 .individual-orders > summary { font-weight: 650; padding: 10px 0; }
+/* BESTÄLLNINGSLISTA: rader och kolumner. */
 .order-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 17px 0; border-top: 1px solid #e3eaf2; }
 .order-row > div:first-child { display: flex; flex-direction: column; gap: 4px; }
 .order-row span { font-size: 14px; color: #59718e; }
@@ -58,8 +65,10 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .row-actions { display: flex; align-items: center; gap: 18px; }
 .danger { color: #a74444; }
 .delete-confirm { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px; background: #fff2f2; border-radius: 8px; }
+/* RESPONSIVT: anpassning till skärmstorlek eller rörelseinställning. */
 @media (max-width: 760px) { .restaurant-grid, .order-grid { grid-template-columns: 1fr; } .panel { padding: 20px; } .page-heading, .list-heading { align-items: flex-start; flex-wrap: wrap; } .restaurant-card { padding: 24px 20px; } .food-symbol { width: 54px; height: 54px; } }
 
+/* RESTAURANGVAL: dörrar och kort. */
 .restaurant-lobby {
     min-height: calc(100svh - 70px); padding: clamp(30px, 7vh, 70px) 24px 40px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -81,7 +90,9 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .door-window > span { font-size: clamp(10px, 1.8vw, 15px); font-style: italic; }
 .door-panel { position: absolute; inset: 64% 12% 8%; border: 5px ridge #356454; }
 .door-handle { position: absolute; right: 5%; top: 53%; width: 10%; height: 8px; border-radius: 4px; background: linear-gradient(#efdb9e, #98743a); box-shadow: 1px 3px 4px #0008; }
+/* RESPONSIVT: anpassning till skärmstorlek eller rörelseinställning. */
 @media (max-width: 420px) { .restaurant-lobby { padding: 32px 20px; } .restaurant-card { border-width: 7px; } .door-window { inset-inline: 8%; border-width: 3px; } }
+/* RESPONSIVT: anpassning till skärmstorlek eller rörelseinställning. */
 @media (prefers-reduced-motion: reduce) { .restaurant-card { transition: none; } .restaurant-card:hover { transform: none; } }
 
 .menu-category + .menu-category { margin-top: 28px; padding-top: 24px; border-top: 1px solid #dce4ed; }
@@ -105,4 +116,5 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 }
 .menu-tabs button:focus-visible { outline: 3px solid #6b9fbc; outline-offset: 2px; }
 .selection-panel { scroll-margin-block: 16px; }
+/* RESPONSIVT: anpassning till skärmstorlek eller rörelseinställning. */
 @media (prefers-reduced-motion: reduce) { .menu-tabs button { transition: none; } }

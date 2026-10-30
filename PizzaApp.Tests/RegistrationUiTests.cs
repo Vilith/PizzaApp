@@ -1,3 +1,5 @@
+// Regressionstester för RegistrationUi: förutsättningar, testfall och testdubblar.
+
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using PizzaApp.Components.Pages;
@@ -20,6 +22,8 @@ public class RegistrationUiTests : TestContext
         Assert.Empty(page.FindAll("#invitation-code"));
         return page;
     }
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]
     public void Signup_completes_without_email_code_and_returns_to_login()

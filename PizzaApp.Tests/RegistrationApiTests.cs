@@ -1,3 +1,5 @@
+// Regressionstester för RegistrationApi: förutsättningar, testfall och testdubblar.
+
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -18,6 +20,9 @@ namespace PizzaApp.Tests;
 
 public class RegistrationApiTests
 {
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
+
     [Theory]
     [InlineData("email_address_not_authorized", "Confirm email")]
     [InlineData("signup_disabled", "avstängd")]
@@ -80,6 +85,7 @@ public class RegistrationApiTests
         using var scope = app.Services.CreateScope();
         Assert.Empty(scope.ServiceProvider.GetRequiredService<PizzaDbContext>().UserProfiles);
     }
+
     [Fact]
     public async Task Direct_provider_signup_requires_verified_activation_and_recovery_is_idempotent()
     {
@@ -213,6 +219,8 @@ public class RegistrationApiTests
         Assert.Equal(HttpStatusCode.TooManyRequests, (await client.PostAsJsonAsync("/api/registration/start", input)).StatusCode);
     }
 
+    // TESTDUBBEL: isolerar testet från externa beroenden.
+
     private sealed class App : WebApplicationFactory<Program>
     {
         private readonly SqliteConnection connection = new("Data Source=:memory:");
@@ -238,8 +246,12 @@ public class RegistrationApiTests
             scope.ServiceProvider.GetRequiredService<PizzaDbContext>().Database.EnsureCreated();
             return host;
         }
+
+        // Städning: koppla bort händelser och frigör resurser.
         protected override void Dispose(bool disposing) { base.Dispose(disposing); if (disposing) connection.Dispose(); }
     }
+
+    // TESTDUBBEL: isolerar testet från externa beroenden.
 
     private sealed class Provider : HttpMessageHandler
     {

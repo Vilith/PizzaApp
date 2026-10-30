@@ -1,3 +1,5 @@
+// Kontrakt för lösenordsbyte och administrativ återställning.
+
 using System.ComponentModel.DataAnnotations;
 
 namespace PizzaApp.Shared;

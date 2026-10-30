@@ -1,3 +1,5 @@
+// Konto-API: konfiguration, inloggad användare och profiländringar.
+
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +17,7 @@ namespace PizzaApp.Api.Controllers;
 public class AuthController(IOptions<SupabaseOptions> options, ICurrentUser user, PizzaDbContext db) : ControllerBase
 {
     [AllowAnonymous]
+    // LÄSNING: hämta data för klienten.
     [HttpGet("config")]
     public ActionResult<AuthConfiguration> Configuration()
     {
@@ -23,6 +26,7 @@ public class AuthController(IOptions<SupabaseOptions> options, ICurrentUser user
         return new AuthConfiguration(options.Value.Url.TrimEnd('/'), options.Value.PublishableKey);
     }
 
+    // LÄSNING: hämta data för klienten.
     [HttpGet("me")]
     public async Task<SignedInUser> Me()
     {
@@ -30,6 +34,7 @@ public class AuthController(IOptions<SupabaseOptions> options, ICurrentUser user
         return Details(profile);
     }
 
+    // ÄNDRING: validera och spara uppgifterna.
     [HttpPut("profile")]
     [RequestSizeLimit(400000)]
     public async Task<ActionResult<SignedInUser>> UpdateProfile(ProfileInput input)

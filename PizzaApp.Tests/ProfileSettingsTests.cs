@@ -1,3 +1,5 @@
+// Regressionstester för ProfileSettings: förutsättningar, testfall och testdubblar.
+
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using PizzaApp.Components.Pages;
@@ -14,6 +16,8 @@ public class ProfileSettingsTests : TestContext
         Services.AddSingleton<IAuthService>(auth);
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]
     public void Settings_saves_nickname_removes_photo_and_shows_confirmation()

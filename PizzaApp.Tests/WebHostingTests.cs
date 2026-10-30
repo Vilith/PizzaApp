@@ -1,3 +1,5 @@
+// Regressionstester för WebHosting: förutsättningar, testfall och testdubblar.
+
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -7,6 +9,9 @@ namespace PizzaApp.Tests;
 
 public class WebHostingTests
 {
+
+    // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
+
     [Theory]
     [InlineData("/")]
     [InlineData("/pizzerian")]
@@ -52,6 +57,8 @@ public class WebHostingTests
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.DoesNotContain("<!DOCTYPE html>", await response.Content.ReadAsStringAsync());
     }
+
+    // TESTDUBBEL: isolerar testet från externa beroenden.
 
     private sealed class WebApp : WebApplicationFactory<Program>
     {

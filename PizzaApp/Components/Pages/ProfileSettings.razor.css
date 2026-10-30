@@ -1,3 +1,5 @@
+/* Redigering av alias, profilbild och obligatoriska kontouppgifter. */
+
 .profile-panel { max-width: 650px; margin: 24px auto; padding: 28px; background: white; border: 1px solid #dce4ed; border-radius: 14px; }
 .profile-toolbar, .profile-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .profile-toolbar { margin-bottom: 24px; }
@@ -9,4 +11,5 @@ label { display: block; font-weight: 600; margin: 22px 0 8px; }
 .photo-preview img, .avatar-placeholder { border-radius: 50%; width: 96px; height: 96px; object-fit: cover; }
 .avatar-placeholder { display: grid; place-items: center; background: #edf4fd; color: #52749a; font-size: 40px; }
 .profile-actions { margin-top: 28px; justify-content: flex-start; }
+/* RESPONSIVT: anpassning till skärmstorlek eller rörelseinställning. */
 @media (max-width: 480px) { .profile-panel { padding: 18px; } .photo-preview { gap: 12px; } }

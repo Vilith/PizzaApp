@@ -1,3 +1,5 @@
+// Inställningar som avgränsar vilken historik statistiken använder.
+
 namespace PizzaApp.Api.Services;
 
 public class StatisticsOptions

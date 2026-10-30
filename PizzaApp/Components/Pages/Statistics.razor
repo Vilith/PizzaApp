@@ -1,3 +1,5 @@
+@* Statistikvyn: hämtning, filtrering och presentation av beställningshistorik. *@
+
 @page "/statistics"
 @inject IStatisticsApiService StatisticsApi
 @inject IAuthService Auth
@@ -15,6 +17,8 @@ else if (Auth.User.MustChangePassword || string.IsNullOrWhiteSpace(Auth.User.Dis
 }
 else
 {
+
+    @* VYSEKTION: Årsfilter, totalsummor och topplistor. *@
     <section class="statistics" aria-labelledby="statistics-heading">
         <div class="statistics-heading">
             <h1 id="statistics-heading">Pizzastatistik 🍕</h1>
@@ -56,6 +60,7 @@ else
 }
 
 @code {
+    // SIDANS TILLSTÅND: fält, formulärmodeller och komponentparametrar.
     private PizzeriaStatistics? data;
     private int? year;
     private bool loading;
@@ -63,6 +68,7 @@ else
     private int version;
     private static string Number(decimal value) => value.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("sv-SE"));
 
+    // Livscykel: läs in sidans initiala data.
     protected override async Task OnInitializedAsync()
     {
         Auth.Changed += AuthChanged;
@@ -88,5 +94,7 @@ else
         { if (request == version) error = "Kunde inte hämta statistiken. Kontrollera anslutningen och försök igen."; }
         finally { if (request == version) loading = false; }
     }
+
+    // Städning: koppla bort händelser och frigör resurser.
     public void Dispose() { ++version; Auth.Changed -= AuthChanged; }
 }

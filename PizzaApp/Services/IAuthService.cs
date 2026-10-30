@@ -1,3 +1,5 @@
+// Gränssnitt för inloggning, session, profil och lösenord.
+
 using PizzaApp.Shared;
 
 namespace PizzaApp.Services;

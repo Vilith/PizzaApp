@@ -1,3 +1,5 @@
+// Alias och lösenord som skickas vid inloggning.
+
 using System.ComponentModel.DataAnnotations;
 
 namespace PizzaApp.Shared;

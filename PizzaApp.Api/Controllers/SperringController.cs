@@ -1,3 +1,5 @@
+// Sperring-API: originalmeny, veckomenyer och återkommande rätter.
+
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
@@ -13,10 +15,59 @@ namespace PizzaApp.Api.Controllers;
 [Route("api/sperring")]
 public class SperringController(PizzaDbContext db, TimeProvider clock) : ControllerBase
 {
+    // MENYBILD: separat från beställningarna, delas mellan besökare och uppdateras automatiskt.
+    [HttpGet("website-menu-image")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<ActionResult<SperringMenuImage>> GetWebsiteMenuImage(
+        [FromServices] PizzaApp.Api.Services.SperringScreenshotService source,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await source.GetAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is Microsoft.Playwright.PlaywrightException or HttpRequestException or InvalidDataException)
+        {
+            return Problem(statusCode: 502, detail: "Menybilden kunde inte hämtas. Öppna originalmenyn eller försök igen senare.");
+        }
+    }
+
+    // Originalmenyn hämtas separat så att ett fel hos Sperrings inte stoppar beställningarna.
+    // LÄSNING: hämta data för klienten.
+    [HttpGet("website-menu")]
+    public async Task<ActionResult<SperringWebsiteMenu>> GetWebsiteMenu(
+        [FromServices] PizzaApp.Api.Services.SperringWebsiteMenuService source,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await source.GetAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidDataException
+            or System.Text.RegularExpressions.RegexMatchTimeoutException)
+        {
+            return Problem(statusCode: 502, detail: "Menyn från Sperrings kunde inte hämtas. Öppna originalmenyn eller försök igen.");
+        }
+    }
+
+    // LÄSNING: hämta data för klienten.
     [HttpGet]
     public async Task<ActionResult<SperringPage>> Get()
     {
         var restaurant = await db.Restaurants.SingleAsync(r => r.Name == "Sperring");
+        // Use the same restaurant lock as ordering and menu publishing when creating choices.
+        await using var transaction = db.Database.CurrentTransaction == null
+            ? await db.Database.BeginTransactionAsync() : null;
+        await db.Restaurants.Where(r => r.Id == restaurant.Id).ExecuteUpdateAsync(s => s.SetProperty(r => r.Name, r => r.Name));
+        var choices = await db.MenuItems.Where(m => m.RestaurantId == restaurant.Id).ToListAsync();
+        foreach (var name in SperringMenu.DailyChoices)
+        {
+            var choice = choices.FirstOrDefault(m => m.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (choice == null) db.MenuItems.Add(new MenuItem { RestaurantId = restaurant.Id, Name = name });
+            else choice.IsHidden = false;
+        }
+        await db.SaveChangesAsync();
+        if (transaction != null) await transaction.CommitAsync();
         var rows = await db.SperringWeeks.AsNoTracking().OrderBy(w => w.Id).ToListAsync();
         var today = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(clock.GetUtcNow(), "Europe/Stockholm").DateTime;
         var menus = Enumerable.Range(1, 2).Select(slot =>
@@ -35,6 +86,7 @@ public class SperringController(PizzaDbContext db, TimeProvider clock) : Control
         return new SperringPage(restaurant.Id, menus, dishes) { RegularDishes = regularDishes, RegularRevision = regular?.Revision ?? Guid.Empty };
     }
 
+    // ÄNDRING: validera och spara uppgifterna.
     [HttpPut("{slot:int}")]
     [Authorize(Policy = "Admin")]
     public async Task<IActionResult> Save(int slot, SperringMenu input)
@@ -76,6 +128,7 @@ public class SperringController(PizzaDbContext db, TimeProvider clock) : Control
         await transaction.CommitAsync();
         return NoContent();
     }
+    // ÄNDRING: validera och spara uppgifterna.
     [HttpPut("regular")]
     [Authorize(Policy = "Admin")]
     public async Task<IActionResult> SaveRegular(SperringRegularInput input)
@@ -112,6 +165,7 @@ public class SperringController(PizzaDbContext db, TimeProvider clock) : Control
         return NoContent();
     }
 
+    // ÅTGÄRD: skapa data eller utför kommandot efter validering.
     [HttpPost("close-week")]
     [Authorize(Policy = "Admin")]
     public async Task<IActionResult> CloseWeek(SperringCloseInput input)

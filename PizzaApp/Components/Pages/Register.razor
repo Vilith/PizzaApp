@@ -1,5 +1,8 @@
+@* Registreringsformulär och aktivering av befintligt konto. *@
+
 @inject IAuthService Auth
 
+@* VYSEKTION: Skapa konto eller aktivera befintligt konto. *@
 <section class="registration-panel" aria-labelledby="register-heading">
     <button type="button" class="btn btn-link" disabled="@busy" @onclick="Back">← Till inloggningen</button>
     <h1 id="register-heading">@(complete ? "Kontot är klart" : activating ? "Slutför befintligt konto" : "Skapa konto")</h1>
@@ -35,6 +38,7 @@
 </section>
 
 @code {
+    // SIDANS TILLSTÅND: fält, formulärmodeller och komponentparametrar.
     [Parameter] public EventCallback OnBack { get; set; }
     private readonly RegistrationInput input = new();
 

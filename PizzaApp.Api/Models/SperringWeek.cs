@@ -1,3 +1,5 @@
+// Lagring av en veckomeny som JSON med revision för samtidiga ändringar.
+
 namespace PizzaApp.Api.Models;
 
 public class SperringWeek

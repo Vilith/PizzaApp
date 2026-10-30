@@ -1,3 +1,5 @@
+// Klientmodell för menyrätt, kategori, beskrivning och pris.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;

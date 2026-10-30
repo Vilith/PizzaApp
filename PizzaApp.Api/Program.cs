@@ -1,3 +1,5 @@
+// Serverstart: tjänster, autentisering, databas och HTTP-pipeline.
+
 
 using Microsoft.EntityFrameworkCore;
 using PizzaApp.Api.Data;
@@ -12,9 +14,16 @@ namespace PizzaApp.Api
     {
         public static void Main(string[] args)
         {
+            // BYGGMILJÖ: Docker installerar Chromium och dess systemberoenden före serverstart.
+            if (args is ["--install-menu-browser"])
+            {
+                Environment.ExitCode = Microsoft.Playwright.Program.Main(["install", "--with-deps", "--only-shell", "chromium"]);
+                return;
+            }
+
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // 1. TJÄNSTER: API, klocka, affärsregler och HTTP-klienter.
 
             builder.Services.AddControllers();            
             builder.Services.AddOpenApi();
@@ -22,6 +31,11 @@ namespace PizzaApp.Api
             builder.Services.AddSingleton(TimeProvider.System);
             builder.Services.Configure<OrderingOptions>(builder.Configuration.GetSection("Ordering"));
             builder.Services.AddScoped<OrderService>();
+            builder.Services.Configure<SperringScreenshotOptions>(builder.Configuration.GetSection("SperringScreenshot"));
+            builder.Services.AddSingleton<ISperringScreenshotCapture, SperringScreenshotCapture>();
+            builder.Services.AddSingleton<SperringScreenshotService>();
+            builder.Services.AddHttpClient<SperringWebsiteMenuService>(client =>
+                client.Timeout = TimeSpan.FromSeconds(15));
             builder.Services.AddScoped<StatisticsService>();
             builder.Services.Configure<StatisticsOptions>(builder.Configuration.GetSection("Statistics"));
             builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection("Supabase"));
@@ -41,6 +55,7 @@ namespace PizzaApp.Api
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
             builder.Services.AddHttpClient("SupabaseVerification", client => client.Timeout = TimeSpan.FromSeconds(15))
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+            // 2. INLOGGNING: verifiera token och kräv behörighet för API-endpoints.
             builder.Services.AddAuthentication("Supabase")
                 .AddScheme<AuthenticationSchemeOptions, SupabaseAuthenticationHandler>("Supabase", _ => { });
             builder.Services.AddAuthorization(options =>
@@ -49,13 +64,14 @@ namespace PizzaApp.Api
                 options.AddPolicy("Admin", policy => policy.RequireAuthenticatedUser().RequireRole("admin"));
             });
 
+            // 3. DATABAS: PostgreSQL-anslutningen hämtas från konfiguration/User Secrets.
             builder.Services.AddDbContext<PizzaDbContext>(options => 
             options.UseNpgsql(
                 builder.Configuration.GetConnectionString("DefaultConnection")));
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            // 4. HTTP-PIPELINE: felhantering, klientfiler, routing och inloggningskontroll.
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
@@ -85,6 +101,7 @@ namespace PizzaApp.Api
                 await next(context);
             });
 
+            // 5. ROUTING: API-rutter och Blazor-klientens fallback.
             app.MapControllers();
             // Unknown API URLs must not return the SPA's HTML document.
             app.MapFallback("/api/{**path}", () => Results.NotFound());

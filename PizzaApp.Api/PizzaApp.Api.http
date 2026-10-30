@@ -1,3 +1,5 @@
+# MANUELLA API-EXEMPEL: ange grundadress och använd autentiserad session/token.
+# Restauranger och menyer läses separat från datumets beställningslista.
 @PizzaApp.Api_HostAddress = https://localhost:7113
 
 GET {{PizzaApp.Api_HostAddress}}/api/restaurants
@@ -26,4 +28,9 @@ Content-Type: application/json
 
 ### À la carte har en egen dagslista
 GET {{PizzaApp.Api_HostAddress}}/api/restaurants/2/orders
+Accept: application/json
+
+
+### Sperrings originalmeny som text utan iframe
+GET {{PizzaApp.Api_HostAddress}}/api/sperring/website-menu
 Accept: application/json

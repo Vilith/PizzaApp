@@ -1,3 +1,5 @@
+// Historisk ögonblicksbild av en avslutad dags beställningar och hämtare.
+
 namespace PizzaApp.Api.Models;
 
 // Immutable snapshot; menu changes and later days cannot change this history.

@@ -1,3 +1,5 @@
+// Lokal användarprofil med alias, bild och registreringsstatus.
+
 namespace PizzaApp.Api.Models;
 
 public class UserProfile

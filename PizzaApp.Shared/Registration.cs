@@ -1,3 +1,5 @@
+// Uppgifter och valideringsregler för registrering av konton.
+
 using System.ComponentModel.DataAnnotations;
 
 namespace PizzaApp.Shared;

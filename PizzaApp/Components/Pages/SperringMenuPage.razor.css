@@ -9,9 +9,13 @@
     --daily-button-padding: 14px 16px;
     --daily-button-min-height: 52px;
     max-width: 1080px;
-    margin: 0 auto;
-    padding: 16px 12px 64px;
-    color: black;
+    margin: 24px auto;
+    padding: clamp(20px, 4vw, 40px);
+    color: #243c35;
+    background: #faf9f4;
+    border: 1px solid #d5ddcf;
+    border-radius: 20px;
+    box-shadow: 0 12px 40px #142d2630;
 }
 
 /* 2. Sidhuvud och rubriker. */
@@ -417,10 +421,10 @@ small {
 /* 14. Originalmenyn visas som PNG utan egen scrollruta.
    Bildbredden 520px är ungefär halv skala för originalets menyområde.
    Ändra --source-menu-image-width för att göra hela bilden större eller mindre.
-   --source-menu-font-size gäller bara den valfria textversionen. */
+   --source-menu-font-size gäller den läsbara textversionen på ljusa menykort. */
 .source-menu {
     --source-menu-image-width: 520px;
-    --source-menu-font-size: 13.5px;
+    --source-menu-font-size: 1rem;
     margin-bottom: 2rem;
 }
 
@@ -442,18 +446,42 @@ small {
     margin: 1rem 0;
 }
 
+.source-menu-status {
+    padding: 12px 16px;
+    border-left: 3px solid #c29c55;
+    background: #fff1d9;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
 .source-menu-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: 16px;
     font-size: var(--source-menu-font-size);
     line-height: 1.6;
-    text-align: center;
     overflow-wrap: anywhere;
 }
 
-.source-menu-content h2 {
-    font-size: 1.4em;
-    margin: 1.5em 0 .75em;
+.source-menu-section {
+    padding: 20px;
+    border: 1px solid #d5ddcf;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.source-menu-section h3 {
+    font-size: 1.2rem;
+    padding-bottom: 12px;
+    margin: 0 0 12px;
+    border-bottom: 1px solid #e2e6dc;
 }
 
 .source-menu-content p {
     margin: .35em 0;
+}
+
+.source-menu-content .source-menu-day {
+    font-weight: 700;
+    margin-top: 14px;
 }

@@ -35,13 +35,13 @@
         }
         else if (imageError != null)
         {
-            <p role="status">@imageError</p>
+            <p class="source-menu-status" role="status">@imageError</p>
             <button @onclick="LoadWebsiteImage">Försök hämta bilden igen</button>
         }
 
         @* Textversionen finns kvar för skärmläsare och när skärmbilden inte går att hämta. *@
         <details class="source-menu-text" open="@(websiteImage == null && !imageLoading)">
-            <summary>Visa menyn som text</summary>
+            <summary>@(websiteImage == null ? "Veckans meny" : "Visa menyn som text")</summary>
             @if (websiteLoading)
             {
                 <p role="status">Hämtar originalmenyn…</p>
@@ -54,21 +54,19 @@
             else if (websiteMenu != null)
             {
                 <div class="source-menu-content">
-                    @foreach (var line in websiteMenu.Lines)
+                    @foreach (var section in WebsiteSections())
                     {
-                        @if (line.StartsWith("Vecka", StringComparison.OrdinalIgnoreCase)
-                            || line.StartsWith("Pastarätter", StringComparison.OrdinalIgnoreCase))
-                        {
-                            <h2>@line</h2>
-                        }
-                        else
-                        {
-                            <p>@line</p>
-                        }
+                        <section class="source-menu-section" aria-label="@section.Title">
+                            <h3>@section.Title</h3>
+                            @foreach (var line in section.Lines)
+                            {
+                                <p class="@(DayNames.Any(day => line.StartsWith(day + ":", StringComparison.OrdinalIgnoreCase)) ? "source-menu-day" : null)">@line</p>
+                            }
+                        </section>
                     }
                 </div>
             }
-            </details>
+        </details>
     </section>
 
     @* Fel, bekräftelser och laddningsstatus. *@
@@ -316,6 +314,22 @@
     private string? imageError;
     private bool websiteLoading = true;
     private string? websiteError;
+
+    // RESERVMENY: veckor, sallader och pasta får egna kort i stället för en lång textkolumn.
+    private IEnumerable<(string Title, List<string> Lines)> WebsiteSections()
+    {
+        var sections = new List<(string Title, List<string> Lines)>();
+        foreach (var line in websiteMenu?.Lines ?? [])
+        {
+            if (sections.Count == 0 || line.StartsWith("Vecka ", StringComparison.OrdinalIgnoreCase)
+                || line.StartsWith("Veckans", StringComparison.OrdinalIgnoreCase)
+                || line.StartsWith("Pastarätter", StringComparison.OrdinalIgnoreCase))
+                sections.Add((line, []));
+            else
+                sections[^1].Lines.Add(line);
+        }
+        return sections;
+    }
 
     private DailyOrderList? daily;
 

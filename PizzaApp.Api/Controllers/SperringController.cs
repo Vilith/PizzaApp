@@ -26,7 +26,8 @@ public class SperringController(PizzaDbContext db, TimeProvider clock) : Control
         {
             return await source.GetAsync(cancellationToken);
         }
-        catch (Exception ex) when (ex is Microsoft.Playwright.PlaywrightException or HttpRequestException or InvalidDataException)
+        catch (Exception ex) when (ex is Microsoft.Playwright.PlaywrightException or HttpRequestException or InvalidDataException
+            or System.ComponentModel.Win32Exception)
         {
             return Problem(statusCode: 502, detail: "Menybilden kunde inte hämtas. Öppna originalmenyn eller försök igen senare.");
         }

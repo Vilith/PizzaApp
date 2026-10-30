@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Microsoft.Extensions.Options;
 using Microsoft.Playwright;
 using PizzaApp.Shared;
@@ -33,7 +34,7 @@ public sealed class SperringScreenshotService(
                 nextAttempt = clock.GetUtcNow().AddMinutes(Math.Max(5, options.Value.RefreshMinutes));
             }
             // 2. KÄLLFEL: behåll tidigare bild och vänta 15 minuter innan ett nytt automatiskt försök.
-            catch (Exception ex) when (ex is PlaywrightException or HttpRequestException or InvalidDataException)
+            catch (Exception ex) when (ex is PlaywrightException or HttpRequestException or InvalidDataException or Win32Exception)
             {
                 logger.LogWarning(ex, "Kunde inte uppdatera Sperrings menybild.");
                 nextAttempt = clock.GetUtcNow().AddMinutes(15);

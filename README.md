@@ -37,6 +37,10 @@ pwsh PizzaApp.Api/bin/Debug/net10.0/playwright.ps1 install chromium --only-shell
 
 Alternativt kan en redan installerad webbläsare användas med `SperringScreenshot__BrowserChannel=msedge`. Dockerfile installerar rätt Chromium och Linux-beroenden under bygget via `--install-menu-browser`; servern behöver därför byggas om vid denna ändring. Docker kan inte provköras i den lokala miljön. Se [Playwrights browserinstallation](https://playwright.dev/dotnet/docs/browsers) för plattformsdetaljer.
 
+Docker-bygget ger appanvändaren läs- och körrättigheter till Playwrights driver och Chromium. Efter bytet till appanvändaren kontrolleras att `/app/.playwright/node/linux-x64/node --version` fungerar. Ett behörighetsfel stoppar därmed bygget i stället för att först upptäckas vid menyhämtning. Om Render loggar `Permission denied` för den sökvägen behöver versionen med denna Dockerfile byggas och publiceras.
+
+Sperring-sidan har en ljus bakgrund bakom innehållet. Om PNG-bilden inte är tillgänglig visas textmenyn i läsbara kort för respektive vecka, sallader och pasta. Menykorten anpassar antalet kolumner efter skärmens bredd.
+
 JSON-filer får inga kommentarer eftersom flera läsare kräver strikt JSON: `global.json` väljer SDK, `launchSettings.json` innehåller lokala startprofiler och `appsettings*.json` innehåller serverinställningar. Hemligheter hör hemma i User Secrets eller miljövariabler, se `AUTH_SETUP.md`. Projektfilerna (`.csproj`) och `Dockerfile` har egna kommentarer om bygginställningar och beroenden.
 
 ## Användarflöde

@@ -72,6 +72,21 @@ public class SperringScreenshotTests
         Assert.Equal(1, source.Calls);
     }
 
+    // DRIVERRÄTTIGHETER: det rapporterade Render-felet ska hanteras utan ett obehandlat 500-fel.
+    [Fact]
+    public async Task Driver_permission_error_returns_gateway_error_and_does_not_retry_every_visit()
+    {
+        var source = new Capture { Failure = new System.ComponentModel.Win32Exception(13, "Permission denied") };
+        var clock = new Clock();
+        using var service = Create(source, clock);
+        var controller = new PizzaApp.Api.Controllers.SperringController(null!, clock);
+
+        var result = await controller.GetWebsiteMenuImage(service, default);
+        Assert.Equal(502, Assert.IsType<Microsoft.AspNetCore.Mvc.ObjectResult>(result.Result).StatusCode);
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.GetAsync(default));
+        Assert.Equal(1, source.Calls);
+    }
+
     // TESTDUBBLAR: styr tiden och simulera långsam eller otillgänglig bildkälla.
     private static SperringScreenshotService Create(Capture source, Clock clock) =>
         new(source, clock, Options.Create(new SperringScreenshotOptions()), NullLogger<SperringScreenshotService>.Instance);
@@ -86,10 +101,12 @@ public class SperringScreenshotTests
     {
         public int Calls;
         public bool Fail;
+        public Exception? Failure;
         public TaskCompletionSource<byte[]>? Pending;
         public Task<byte[]> CaptureAsync(CancellationToken cancellationToken)
         {
             Calls++;
+            if (Failure != null) return Task.FromException<byte[]>(Failure);
             if (Fail) throw new InvalidDataException("Simulerat källfel");
             return Pending?.Task ?? Task.FromResult<byte[]>([137, 80, 78, 71]);
         }

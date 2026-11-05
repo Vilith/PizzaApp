@@ -22,18 +22,20 @@ Projektets egen källkod har sektionskommentarer på svenska. Små modellfiler h
 | Regressionstester och testdubblar | `PizzaApp.Tests/` |
 | Serverns tjänster och HTTP-pipeline | `PizzaApp.Api/Program.cs` |
 
-Sperrings menybild laddas upp av en administratör. PNG, JPEG, GIF, WebP, BMP och AVIF stöds, högst 10 MB. Bilden sparas i databasen och visas för inloggade besökare. Nästa uppladdning ersätter den tidigare bilden utan bildarkiv. Filinnehåll och storlek kontrolleras i API:t, som kräver adminbehörighet. Textmenyn hämtas fortfarande separat från Sperrings hemsida.
+Sperrings menybild laddas upp av en administratör. PNG, JPEG, GIF, WebP, BMP och AVIF stöds, högst 10 MB. Bilden sparas i databasen och visas för inloggade besökare. Nästa uppladdning ersätter den tidigare bilden utan bildarkiv. Filinnehåll och storlek kontrolleras i API:t, som kräver adminbehörighet.
 
 Kör databasens migrationer före publicering (`dotnet ef database update --project PizzaApp.Api`). Migrationen `SperringUploadedMenuImage` skapar bildlagringen. Playwright och Chromium behövs inte längre.
 
 I `SperringMenuPage.razor.css` styr `--source-menu-image-width` menybildens bredd. Höjden anpassas automatiskt och bilden ryms även på mobil.
 JSON-filer får inga kommentarer eftersom flera läsare kräver strikt JSON: `global.json` väljer SDK, `launchSettings.json` innehåller lokala startprofiler och `appsettings*.json` innehåller serverinställningar. Hemligheter hör hemma i User Secrets eller miljövariabler, se `AUTH_SETUP.md`. Projektfilerna (`.csproj`) och `Dockerfile` har egna kommentarer om bygginställningar och beroenden.
 
+Administratörer kan under **Inställningar → Medlemsvy** välja att visa pizza- och Sperringsidan som medlem. Adminverktygen döljs tills valet avmarkeras eller användaren loggar ut. Kontots riktiga behörighet ändras inte.
+
 ## Användarflöde
 
 - Välj **Skapa konto**, ange nick, e-post och lösenord. Kontot blir klart direkt, utan mejlkod eller administratörsgodkännande. Logga in med ditt alias och lösenord. Äldre konton utan profil väljer nick via Slutför befintligt konto. Välj därefter Pizzeria (Kvänum Pizzeria) eller À la carte (Sperring).
 - Pizzeria: välj rätt via menyflikarna (pizzor 1–12, 13–24, 25–33, 34–43 samt Sallader, Kebab och Stekrätter). Ditt val centreras automatiskt. Första tillgängliga såsen i ingredienslistan förväljs, annars Ingen sås; valet kan ändras. Såser: Vitlökssås, Bearnaisesås, Kebabsås, Kebabsås (Mixad) och Kebabsås (Stark). Drycker: Coca-Cola 33cl, Fanta 33cl, Sprite 33cl och Pepsi Max 33cl. Välj dryck och antal.
-- Sperring: originalmenyn visas direkt över två veckors dagsval, måndag–fredag. Välj Dagens rätt, Dagens sallad eller en återkommande rätt under önskat datum och ange antal och eventuell kommentar. Listan visar alias, beställd maträtt och profilbild när sådan finns. Beställningar kan göras i förväg för vardagarna i de visade veckorna.
+- Sperring: den uppladdade menybilden visas direkt över två veckors dagsval, måndag–fredag. Välj Dagens rätt, Dagens sallad eller en återkommande rätt under önskat datum och ange antal och eventuell kommentar. Listan visar alias, beställd maträtt och profilbild när sådan finns. Beställningar kan göras i förväg för vardagarna i de visade veckorna.
 - Admin kan redigera Sperrings år, veckonummer, återkommande rätter och extra rätter per vardag. Skriv en rätt per rad. Återkommande rätter visas alla fem vardagar. Menyer sparas separat; samma vecka får inte användas i båda menyerna. Veckonumren flyttas fram manuellt. Samtidiga ändringar skyddas med revisioner; ladda om innan du försöker spara en inaktuell meny igen.
 - Ditt profilnamn används automatiskt; du behöver inte fylla i namn vid beställning. Kommentar är valfri. Under **Inställningar** kan du ändra nick samt välja eller ta bort en profilbild. Nya beställningar får det nya namnet; redan sparade beställningar och historiken behåller sitt ursprungliga namn.
 - ”Att ringa in” visar beställarnas namn med kryssrutor för vilka som kan hämta. Samma konto och namn visas en gång; olika konton hålls isär även om namnet är samma. Namnlösa beställningar behöver ett namn innan de kan väljas som hämtare.

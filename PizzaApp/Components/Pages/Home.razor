@@ -268,7 +268,7 @@ else if (restaurant != null)
                         </div>
                     }
                 </details>
-                @if (Auth.User.IsAdmin)
+                @if (Auth.ShowAdminControls)
                 {
                 <div class="completion-box">
                         <p>Dagens beställning låses och sparas för framtida statistik när den är hämtad.</p>
@@ -325,7 +325,7 @@ else if (restaurant != null)
     private Guid? loadedUser;
     private int loadVersion;
 
-    private bool CanEdit(OrderDetails order) => Auth.User is { } user && (user.IsAdmin || order.OwnerUserId == user.Id);
+    private bool CanEdit(OrderDetails order) => Auth.User is { } user && (Auth.ShowAdminControls || order.OwnerUserId == user.Id);
 
     private void AuthChanged() => _ = InvokeAsync(async () =>
     {

@@ -28,6 +28,19 @@ public class HomeTests : TestContext
         Services.AddSingleton<IStatisticsApiService>(new FakeStatistics());
     }
 
+    [Fact]
+    public void Admin_member_preview_hides_other_users_order_controls_and_can_be_disabled()
+    {
+        orders.Existing.OwnerUserId = Guid.NewGuid();
+        auth.SetViewAsMember(true);
+        var page = RenderComponent<Home>();
+        page.Find("[data-restaurant='1']").Click();
+        Assert.Empty(page.FindAll("[data-edit], [data-delete], [data-action='complete']"));
+        Assert.True(page.Find("[data-collector='1']").HasAttribute("disabled"));
+        auth.SetViewAsMember(false);
+        page.WaitForAssertion(() => Assert.Single(page.FindAll("[data-action='complete']")));
+        Assert.NotEmpty(page.FindAll("[data-edit], [data-delete]"));
+    }
     // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]
@@ -72,7 +85,7 @@ public class HomeTests : TestContext
 
     [Theory]
     [InlineData("/pizzerian", null, "Vesuvio", "Dagens rätt")]
-    [InlineData("/sperring", "Veckans goda.", "Meny vecka", "Vesuvio")]
+    [InlineData("/sperring", "Sperrings", "Meny vecka", "Vesuvio")]
     public void Direct_address_loads_only_the_selected_restaurant(string path, string? title, string dish, string otherDish)
     {
         Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo(path);
@@ -92,7 +105,7 @@ public class HomeTests : TestContext
         var page = RenderComponent<Home>();
         page.Find("[data-menu-item='2']").Click();
         navigation.NavigateTo("/sperring");
-        Assert.Contains("Veckans goda.", page.Find("h1").TextContent);
+        Assert.Contains("Sperrings", page.Find("h1").TextContent);
         Assert.Empty(page.FindAll("#sauce, #drink, form"));
         Assert.DoesNotContain("Vesuvio", page.Markup);
     }

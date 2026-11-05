@@ -11,6 +11,30 @@ namespace PizzaApp.Tests;
 public class AuthServiceTests
 {
 
+    [Fact]
+    public async Task Member_preview_preserves_identity_and_token_and_resets_on_signout()
+    {
+        var backend = new Backend();
+        backend.profile = backend.profile with { IsAdmin = true };
+        IAuthService auth = new AuthService(backend);
+        await auth.SignInAsync("Anna", "password");
+        var user = auth.User;
+        auth.SetViewAsMember(true);
+        Assert.True(auth.ViewAsMember);
+        Assert.False(auth.ShowAdminControls);
+        Assert.Equal(user, auth.User);
+        Assert.Equal("login-token", await auth.GetAccessTokenAsync());
+        await auth.RefreshUserAsync();
+        Assert.True(auth.ViewAsMember);
+        await auth.SignOutAsync();
+        Assert.False(auth.ViewAsMember);
+        await auth.SignInAsync("Anna", "password");
+        Assert.True(auth.ShowAdminControls);
+        backend.profile = backend.profile with { IsAdmin = false };
+        await auth.RefreshUserAsync();
+        auth.SetViewAsMember(true);
+        Assert.False(auth.ViewAsMember);
+    }
     // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]
@@ -150,7 +174,7 @@ public class AuthServiceTests
         public bool RejectPassword, RejectProfile, RejectRefresh, FailLogout, LoggedOut;
         public Action? OnRefresh;
         public bool RejectProfileUpdate;
-        private SignedInUser profile = new(new TestUser().Id, "anna@example.test", false);
+        public SignedInUser profile = new(new TestUser().Id, "anna@example.test", false);
         public HttpClient CreateClient(string name) => new(this, disposeHandler: false) { BaseAddress = new("https://api.example.test/") };
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {

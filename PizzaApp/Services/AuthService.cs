@@ -19,6 +19,15 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
     private DateTimeOffset expiresAt;
     private int sessionVersion;
     public SignedInUser? User { get; private set; }
+    // Förhandsvisning påverkar gränssnittet; kontots riktiga roll behålls.
+    public bool ViewAsMember { get; private set; }
+    public void SetViewAsMember(bool enabled)
+    {
+        var next = User?.IsAdmin == true && enabled;
+        if (ViewAsMember == next) return;
+        ViewAsMember = next;
+        Changed?.Invoke();
+    }
     public event Action? Changed;
 
     // 2. INLOGGNING: verifiera alias och skapa session.
@@ -283,7 +292,7 @@ public sealed class AuthService(IHttpClientFactory clients) : IAuthService
     public void ClearSession()
     {
         Interlocked.Increment(ref sessionVersion);
-        tokens = null; User = null;
+        tokens = null; User = null; ViewAsMember = false;
         Changed?.Invoke();
     }
 

@@ -15,6 +15,15 @@ public sealed class TestUser : ICurrentUser
 public sealed class FakeAuth : IAuthService
 {
     public SignedInUser? User { get; set; } = new(new TestUser().Id, "admin@example.test", true, "Anna");
+    // Förhandsvisning påverkar gränssnittet; kontots riktiga roll behålls.
+    public bool ViewAsMember { get; private set; }
+    public void SetViewAsMember(bool enabled)
+    {
+        var next = User?.IsAdmin == true && enabled;
+        if (ViewAsMember == next) return;
+        ViewAsMember = next;
+        Changed?.Invoke();
+    }
     public event Action? Changed;
 
     // Inloggning: verifiera alias och starta session.
@@ -53,7 +62,7 @@ public sealed class FakeAuth : IAuthService
     { PasswordChanged = true; ClearSession(); return Task.CompletedTask; }
 
     // Session: rensa lokal inloggningsstatus.
-    public void ClearSession() { User = null; Changed?.Invoke(); }
+    public void ClearSession() { ViewAsMember = false; User = null; Changed?.Invoke(); }
 
     // Session: hämta eller förnya åtkomsttoken.
     public Task<string?> GetAccessTokenAsync() => Task.FromResult<string?>(User == null ? null : "test-token");

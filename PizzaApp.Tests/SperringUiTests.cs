@@ -102,8 +102,6 @@ public class SperringUiTests : TestContext
         Assert.Contains("Dagens sallad", day.QuerySelector(".daily-dishes")!.TextContent);
         Assert.DoesNotContain(description, day.TextContent);
         Assert.Empty(page.FindAll("iframe"));
-        Assert.Equal("https://www.sperringsmat.se/lunch-meny", page.Find(".source-menu a").GetAttribute("href"));
-        Assert.Contains("Vecka 39", page.Find(".source-menu-content").TextContent);
         Assert.DoesNotContain("Pasta", day.QuerySelector(".daily-dishes")!.TextContent);
         Assert.Contains("Pasta", day.QuerySelector(".regular-dishes")!.TextContent);
         Assert.Equal("daily-dishes", day.QuerySelector(".dish-group")!.ClassList.Last());
@@ -122,22 +120,20 @@ public class SperringUiTests : TestContext
         Assert.Contains("Köttbullar", page.Find(".editor textarea").GetAttribute("value") ?? page.Find(".editor textarea").TextContent);
     }
 
-    // ORIGINALMENY: källfel får inte blockera beställningar och kan följas av ett nytt försök.
     [Fact]
-    public void Website_failure_keeps_ordering_available_and_can_be_retried()
+    public void Member_preview_hides_admin_controls_and_removed_menu_sections()
     {
-        menus.WebsiteFails = true;
+        auth.SetViewAsMember(true);
+        menus.Image = new(TestProfileImage.Png, DateTimeOffset.UtcNow);
         var page = RenderComponent<SperringMenuPage>();
-        Assert.Contains("Kunde inte hämta originalmenyn", page.Find(".source-menu").TextContent);
+        Assert.Equal("Sperrings", page.Find("h1").TextContent);
+        Assert.Empty(page.FindAll(".regular-editor, input[type=file], .source-menu a, .source-menu details, .source-menu-updated"));
+        Assert.DoesNotContain("Redigera meny", page.Markup);
+        Assert.DoesNotContain("Avsluta vecka", page.Markup);
         Assert.NotEmpty(page.FindAll("button.dish"));
-
-        menus.WebsiteFails = false;
-        page.Find(".source-menu button").Click();
-
-        Assert.Contains("Exempellunch", page.Find(".source-menu-content").TextContent);
-        Assert.Empty(page.FindAll(".source-menu [role=alert]"));
+        Assert.Single(page.FindAll(".source-menu-image"));
+        Assert.True(auth.User!.IsAdmin);
     }
-
     // MENYBILD: PNG visas med originalets proportioner och texten finns som alternativ.
     [Fact]
     public void Shows_uploaded_image_and_upload_control_for_admin()
@@ -146,21 +142,18 @@ public class SperringUiTests : TestContext
         var page = RenderComponent<SperringMenuPage>();
 
         Assert.Equal(TestProfileImage.Png, page.Find(".source-menu-image").GetAttribute("src"));
-        Assert.Contains("Bild uppladdad", page.Find(".source-menu-updated").TextContent);
         Assert.Single(page.FindAll("input[type=file]"));
-        Assert.False(page.Find(".source-menu-text").HasAttribute("open"));
         Assert.NotEmpty(page.FindAll("button.dish"));
     }
 
     [Fact]
-    public void Image_failure_opens_text_menu_and_keeps_ordering_available()
+    public void Image_failure_keeps_ordering_available()
     {
         menus.ImageFails = true;
         var page = RenderComponent<SperringMenuPage>();
 
         Assert.Empty(page.FindAll(".source-menu-image"));
         Assert.Contains("Menybilden kunde inte laddas", page.Find(".source-menu").TextContent);
-        Assert.True(page.Find(".source-menu-text").HasAttribute("open"));
         Assert.NotEmpty(page.FindAll("button.dish"));
     }
 
@@ -187,10 +180,6 @@ public class SperringUiTests : TestContext
         public Task<SperringMenuImage?> GetMenuImageAsync() => ImageFails
             ? Task.FromException<SperringMenuImage?>(new HttpRequestException("Källan är nere"))
             : Task.FromResult(Image);
-        public bool WebsiteFails;
-        public Task<SperringWebsiteMenu> GetWebsiteMenuAsync() =>
-            WebsiteFails ? Task.FromException<SperringWebsiteMenu>(new HttpRequestException("Källan är nere")) :
-                Task.FromResult(new SperringWebsiteMenu(["Vecka 39", "Måndag:", "Exempellunch", "Veckans Sallader", "Exempelsallad"]));
         public SperringMenu? Saved;
         public SperringRegularInput? SavedRegular;
         public SperringPage Page = new(2,

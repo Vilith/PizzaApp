@@ -9,13 +9,12 @@
 
     @* Sidhuvud. *@
     <header class="sperring-header">
-        <h1 id="sperring-title">Veckans goda.</h1>
+        <h1 id="sperring-title">Sperrings</h1>
     </header>
 
     @* Menybilden laddas upp av admin. *@
     <section class="source-menu" aria-label="Sperrings lunchmeny">
-        <p>Originalmenyn finns på <a href="https://www.sperringsmat.se/lunch-meny" target="_blank" rel="noopener noreferrer">Sperrings hemsida – öppna i nytt fönster</a>.</p>
-        @if (Auth.User?.IsAdmin == true)
+        @if (Auth.ShowAdminControls)
         {
             <div class="menu-image-upload">
                 <label for="menu-image-file">Ladda upp menybild</label>
@@ -30,7 +29,6 @@
         @if (websiteImage != null)
         {
             <img class="source-menu-image" src="@websiteImage.DataUrl" alt="Uppladdad menybild för Sperring" />
-            <p class="source-menu-updated">Bild uppladdad @TimeZoneInfo.ConvertTimeBySystemTimeZoneId(websiteImage.UploadedAt, "Europe/Stockholm").ToString("d/M HH:mm")</p>
         }
         else if (imageLoading)
         {
@@ -45,34 +43,6 @@
             <p class="source-menu-status" role="alert">@imageError</p>
             <button disabled="@imageUploading" @onclick="LoadWebsiteImage">Ladda om bilden</button>
         }
-        @* Separat textmeny finns som alternativ till den uppladdade bilden. *@
-        <details class="source-menu-text" open="@(websiteImage == null && !imageLoading)">
-            <summary>@(websiteImage == null ? "Veckans meny" : "Visa menyn som text")</summary>
-            @if (websiteLoading)
-            {
-                <p role="status">Hämtar originalmenyn…</p>
-            }
-            else if (websiteError != null)
-            {
-                <p role="alert">@websiteError</p>
-                <button @onclick="LoadWebsiteMenu">Försök hämta menyn igen</button>
-            }
-            else if (websiteMenu != null)
-            {
-                <div class="source-menu-content">
-                    @foreach (var section in WebsiteSections())
-                    {
-                        <section class="source-menu-section" aria-label="@section.Title">
-                            <h3>@section.Title</h3>
-                            @foreach (var line in section.Lines)
-                            {
-                                <p class="@(DayNames.Any(day => line.StartsWith(day + ":", StringComparison.OrdinalIgnoreCase)) ? "source-menu-day" : null)">@line</p>
-                            }
-                        </section>
-                    }
-                </div>
-            }
-        </details>
     </section>
 
     @* Fel, bekräftelser och laddningsstatus. *@
@@ -93,7 +63,7 @@
     {
 
         @* Admin: gemensamma återkommande rätter för alla dagar. *@
-        @if (Auth.User?.IsAdmin == true)
+        @if (Auth.ShowAdminControls)
         {
             <section class="regular-editor" aria-label="Återkommande rätter">
                 <h2>Återkommande rätter</h2>
@@ -118,7 +88,7 @@
                         <p class="eyebrow">@week.Monday.ToString("d/M")–@week.Monday.AddDays(4).ToString("d/M") · @week.Year</p>
                         <h2>Meny vecka @week.Week</h2>
                     </div>
-                    @if (Auth.User?.IsAdmin == true)
+                    @if (Auth.ShowAdminControls)
                     {
                         <div class="actions">
                             <button disabled="@(busy || editing != null)" @onclick="() => Edit(week)">Redigera meny</button>
@@ -295,7 +265,7 @@
                             <small>@order.Comment</small>
                         }
                     </div>
-                    @if (daily.Date >= today && !daily.IsLocked && (Auth.User?.IsAdmin == true || Auth.User?.Id == order.OwnerUserId))
+                    @if (daily.Date >= today && !daily.IsLocked && (Auth.ShowAdminControls || Auth.User?.Id == order.OwnerUserId))
                     {
                         <button disabled="@busy" aria-label="Ta bort beställning för @order.Name: @order.Pizza" @onclick="() => Delete(order)">Ta bort</button>
                     }
@@ -314,30 +284,10 @@
     private SperringPage? page;
 
     // Originalmenyn har egen laddningsstatus så att beställningarna fungerar även vid källfel.
-    private SperringWebsiteMenu? websiteMenu;
     private SperringMenuImage? websiteImage;
     private bool imageLoading = true;
     private bool imageUploading;
     private string? imageError;
-    private bool websiteLoading = true;
-    private string? websiteError;
-
-    // RESERVMENY: veckor, sallader och pasta får egna kort i stället för en lång textkolumn.
-    private IEnumerable<(string Title, List<string> Lines)> WebsiteSections()
-    {
-        var sections = new List<(string Title, List<string> Lines)>();
-        foreach (var line in websiteMenu?.Lines ?? [])
-        {
-            if (sections.Count == 0 || line.StartsWith("Vecka ", StringComparison.OrdinalIgnoreCase)
-                || line.StartsWith("Veckans", StringComparison.OrdinalIgnoreCase)
-                || line.StartsWith("Pastarätter", StringComparison.OrdinalIgnoreCase))
-                sections.Add((line, []));
-            else
-                sections[^1].Lines.Add(line);
-        }
-        return sections;
-    }
-
     private DailyOrderList? daily;
 
     private SperringMenu? editing;
@@ -383,7 +333,7 @@
         }
     }
 
-    protected override Task OnInitializedAsync() => Task.WhenAll(Reload(), LoadWebsiteMenu(), LoadWebsiteImage());
+    protected override Task OnInitializedAsync() => Task.WhenAll(Reload(), LoadWebsiteImage());
 
     // MENYBILD: separat laddning gör att beställningsknapparna kan visas direkt.
     private async Task LoadWebsiteImage()
@@ -406,7 +356,7 @@
 
     private async Task UploadImage(InputFileChangeEventArgs args)
     {
-        if (Auth.User?.IsAdmin != true || imageUploading) return;
+        if (!Auth.ShowAdminControls || imageUploading) return;
         imageUploading = true;
         imageError = null;
         try
@@ -431,26 +381,6 @@
         }
         finally { imageUploading = false; }
     }
-    private async Task LoadWebsiteMenu()
-    {
-        websiteLoading = true;
-        websiteError = null;
-        try
-        {
-            websiteMenu = await Menus.GetWebsiteMenuAsync();
-            if (websiteMenu.Lines.Length == 0)
-                websiteError = "Originalmenyn är inte tillgänglig. Öppna länken till Sperrings ovan.";
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or AuthException)
-        {
-            websiteError = "Kunde inte hämta originalmenyn. Öppna länken till Sperrings ovan.";
-        }
-        finally
-        {
-            websiteLoading = false;
-        }
-    }
-
     // 4. Gemensam hantering av vänteläge och fel vid API-anrop.
 
     private async Task Run(Func<Task> action)

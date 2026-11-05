@@ -23,6 +23,10 @@
                 <button class="nav-action" data-action="logout" disabled="@signingOut" @onclick="SignOut">@(signingOut ? "Loggar ut…" : "Logga ut")</button>
             </div>
         </nav>
+        @if (Auth.User?.IsAdmin == true && Auth.ViewAsMember)
+        {
+            <p class="member-preview-status" role="status">Medlemsvy är aktiv. <a href="/settings">Ändra under Inställningar</a></p>
+        }
         @if (error != null) { <p class="alert alert-danger" role="alert">@error</p> }
     }
     <main class="app-content">@Body</main>

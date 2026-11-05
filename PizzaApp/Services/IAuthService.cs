@@ -7,6 +7,9 @@ namespace PizzaApp.Services;
 public interface IAuthService
 {
     SignedInUser? User { get; }
+    bool ViewAsMember { get; }
+    bool ShowAdminControls => User?.IsAdmin == true && !ViewAsMember;
+    void SetViewAsMember(bool enabled);
     event Action? Changed;
     Task SignInAsync(string alias, string password);
     Task SignOutAsync();

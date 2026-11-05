@@ -17,6 +17,28 @@ public class ProfileSettingsTests : TestContext
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
+    [Fact]
+    public void Admin_can_toggle_member_preview_and_return_to_admin_view()
+    {
+        var page = RenderComponent<ProfileSettings>();
+        page.Find("#view-as-member").Change(true);
+        Assert.True(auth.ViewAsMember);
+        Assert.False(((IAuthService)auth).ShowAdminControls);
+        Assert.True(auth.User!.IsAdmin);
+        Assert.Single(page.FindAll("#view-as-member"));
+        page.Find("#view-as-member").Change(false);
+        Assert.True(((IAuthService)auth).ShowAdminControls);
+    }
+
+    [Fact]
+    public void Members_do_not_see_preview_setting()
+    {
+        auth.User = auth.User! with { IsAdmin = false };
+        var page = RenderComponent<ProfileSettings>();
+        Assert.Empty(page.FindAll("#view-as-member"));
+        auth.SetViewAsMember(true);
+        Assert.False(auth.ViewAsMember);
+    }
     // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]

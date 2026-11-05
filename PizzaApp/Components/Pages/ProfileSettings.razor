@@ -53,6 +53,17 @@ else
         </EditForm>
 
         }
+        @if (Auth.User.IsAdmin && !Auth.User.MustChangePassword)
+        {
+            <section class="member-preview" aria-labelledby="member-preview-heading">
+                <h2 id="member-preview-heading">Medlemsvy</h2>
+                <label for="view-as-member">
+                    <input id="view-as-member" type="checkbox" checked="@Auth.ViewAsMember" @onchange="e => Auth.SetViewAsMember(e.Value is true)" />
+                    Visa pizza- och Sperringsidan som medlem
+                </label>
+                <p class="hint">Döljer adminverktygen under den här inloggningen. Avmarkera för att återgå till adminvyn.</p>
+            </section>
+        }
         <PasswordSettings />
 
         @if (success != null) { <p class="alert alert-success mt-3" role="status">@success</p> }

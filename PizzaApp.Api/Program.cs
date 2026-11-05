@@ -52,6 +52,7 @@ namespace PizzaApp.Api
             {
                 options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
                 options.AddPolicy("Admin", policy => policy.RequireAuthenticatedUser().RequireRole("admin"));
+                options.AddPolicy("Owner", policy => policy.RequireAuthenticatedUser().RequireRole("admin").RequireClaim("pizza_owner", "true"));
             });
 
             // 3. DATABAS: PostgreSQL-anslutningen hämtas från konfiguration/User Secrets.

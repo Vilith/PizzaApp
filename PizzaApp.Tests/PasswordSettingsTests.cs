@@ -12,11 +12,22 @@ public class PasswordSettingsTests : TestContext
     private readonly FakeAuth auth = new();
     public PasswordSettingsTests() => Services.AddSingleton<IAuthService>(auth);
 
+    [Fact]
+    public void Ordinary_admin_can_change_own_password_but_cannot_reset_others()
+    {
+        var page = RenderComponent<PasswordSettings>();
+        Assert.True(auth.User!.IsAdmin);
+        Assert.False(auth.User.IsOwner);
+        Assert.Single(page.FindAll("#current-password"));
+        Assert.Empty(page.FindAll("#reset-account, #admin-password, .btn-outline-primary"));
+        Assert.DoesNotContain("Återställ kollegas lösenord", page.Markup);
+    }
     // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]
-    public void Admin_selects_colleague_reauthenticates_and_can_hide_temporary_password()
+    public void Owner_selects_colleague_reauthenticates_and_can_hide_temporary_password()
     {
+        auth.User = auth.User! with { IsOwner = true };
         var page = RenderComponent<PasswordSettings>();
         page.Find("button.btn-outline-primary").Click();
         page.Find("#reset-account").Change(auth.Accounts[0].Id.ToString());

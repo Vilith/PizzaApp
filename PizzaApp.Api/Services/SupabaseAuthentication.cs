@@ -14,6 +14,8 @@ namespace PizzaApp.Api.Services;
 public class SupabaseOptions
 {
     public string Url { get; set; } = "";
+    // Bara detta verifierade adminkonto får återställa andras lösenord.
+    public string OwnerUserId { get; set; } = "";
     public string SecretKey { get; set; } = "";
     public string PublishableKey { get; set; } = "";
     public bool IsConfigured => Uri.TryCreate(Url, UriKind.Absolute, out var uri)
@@ -68,7 +70,9 @@ public sealed class SupabaseAuthenticationHandler(
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(ClaimTypes.Email, user.TryGetProperty("email", out var email) ? email.GetString() ?? "" : ""),
                 new Claim(ClaimTypes.Role, assignedRole),
-                new Claim("pizza_password_change_required", changeRequired ? "true" : "false")
+                new Claim("pizza_password_change_required", changeRequired ? "true" : "false"),
+                new Claim("pizza_owner", assignedRole == "admin" && Guid.TryParse(config.OwnerUserId, out var ownerId)
+                    && ownerId != Guid.Empty && userId == ownerId ? "true" : "false")
             };
             return AuthenticateResult.Success(new AuthenticationTicket(
                 new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name)), Scheme.Name));

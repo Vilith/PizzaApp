@@ -13,7 +13,7 @@ I projektets **Authentication → Sign In / Providers**:
 
 Ingen SMTP-tjänst eller mejlmall behövs för registreringen. API:t kontrollerar att `mailer_autoconfirm` är `true` innan kontot skapas. Om Confirm email fortfarande är på visas ett inställningsfel innan signup, så appen inte börjar skicka mejl av misstag.
 
-Supabase markerar nya adresser som automatiskt bekräftade när Confirm email är avstängt. Det är inte ett bevis på att användaren äger adressen. API:t verifierar fortfarande sessionen hos Supabase, kontots UUID, medlemskap och roll. Glömda lösenord hanteras under Inställningar av administratören med ett tillfälligt lösenord. Appen har ingen lösenordsåterställning via mejl; SMTP behövs inte.
+Supabase markerar nya adresser som automatiskt bekräftade när Confirm email är avstängt. Det är inte ett bevis på att användaren äger adressen. API:t verifierar fortfarande sessionen hos Supabase, kontots UUID, medlemskap och roll. Glömda lösenord hanteras under Inställningar av ägaren med ett tillfälligt lösenord. Appen har ingen lösenordsåterställning via mejl; SMTP behövs inte.
 
 Äldre konton som redan väntar på bekräftelse kan behöva aktiveras separat av administratören i Supabase. Att ändra inställningen ska inte betraktas som att gamla konton automatiskt blivit klara. Radera inte profiler eller order för att lösa detta.
 
@@ -66,7 +66,7 @@ WHERE id = 'ERSÄTT-MED-ANVÄNDARENS-UUID'::uuid;
 
 API:t hämtar aktuell serverstyrd roll vid varje anrop. En uttrycklig spärr vinner över lokalt medlemskap. **Att bara ta bort `pizza_role` spärrar inte en självregistrerad medlem.** För att häva spärren tilldelar projektägaren `member` eller `admin`. Appens rollindikering uppdateras vid ny inloggning/tokenförnyelse, men servern kontrollerar alltid aktuell roll.
 
-Ingen kan bli admin via `user_metadata`, profil-/registreringsformuläret eller en beställning. Ingen första-användaren-blir-admin-regel finns. Lösenordsåterställning och kontoadministration hanteras tills vidare i Supabase; appen har ingen återställningslänkshantering.
+Ingen kan bli admin via `user_metadata`, profil-/registreringsformuläret eller en beställning. Ingen första-användaren-blir-admin-regel finns. Ägaren återställer lösenord under Inställningar. Rolltilldelning hanteras i Supabase; appen har ingen återställningslänkshantering.
 
 ## Databas och appadress
 
@@ -124,14 +124,17 @@ Om dubbletter finns avbryts migrationen utan att byta namn på någon. Kom över
 
 Alias reserveras när profilen sparas. Om två personer registrerar samma alias samtidigt kan endast en lyckas; den andra väljer ett annat nick via Slutför befintligt konto.
 
-## Lösenordsbyte och administratörsåterställning utan mejl
+## Lösenordsbyte och ägarstyrd återställning utan mejl
 
 1. Hämta eller skapa en separat **secret key** (sb_secret_...) i Supabase, **Settings → API Keys**, för PizzaApp-servern.
 2. I Render, öppna API-tjänstens **Environment** och lägg till **Supabase__SecretKey** med nyckeln som värde. Behåll befintlig Supabase__PublishableKey. Spara och publicera/starta om tjänsten.
 3. För lokal utveckling: sätt **Supabase:SecretKey** i API-projektets User Secrets via Visual Studios **Manage User Secrets**. Lägg inte nyckeln i källkod, klientkonfiguration eller Git. Äldre service_role-nyckel stöds också.
-4. Publicera koden. Ingen ny databasmigration eller SMTP krävs för lösenordsfunktionen. Låt Confirm email vara avstängt.
+4. Ägarkontots UUID är konfigurerat i serverns `appsettings.json` som **Supabase:OwnerUserId**. Vid behov kan det åsidosättas med **Supabase__OwnerUserId** i Render eller **Supabase:OwnerUserId** i lokala User Secrets. Kontrollera att en eventuell befintlig inställning pekar på samma konto. Bara ett UUID stöds. Kontot måste också ha `pizza_role = admin`. Använd UUID från **Authentication → Users**, inte alias eller e-post. Tomt/ogiltigt värde stänger återställning för alla.
+5. Publicera/starta om tjänsten och logga in igen. Ingen ny databasmigration eller SMTP krävs för lösenordsfunktionen. Låt Confirm email vara avstängt.
 
-Administratör: gå till **Inställningar → Återställ kollegas lösenord → Hämta användare**. Välj kollega och ange ditt eget nuvarande lösenord. **Skapa tillfälligt lösenord** ersätter kollegans gamla lösenord och visar ett slumpat lösenord. Lämna det privat till rätt person och dölj det sedan. Det kan inte hämtas igen; vid tappat svar görs en ny återställning. Återställning av det egna kontot via denna ruta tillåts inte.
+Endast det konfigurerade ägarkontot kan lista konton för återställning och återställa andras lösenord, även vid direkta API-anrop. Övriga administratörer behåller adminbehörighet för menyer, bilder och beställningar. Alla kan byta sitt eget lösenord. `IsOwner` i klienten kommer från API:ts verifierade identitet; klientfält och Supabase-metadata kan inte ge ägarbehörighet. Serverns miljöinställningar och Supabase-projektet ska bara vara åtkomliga för betrodda projektägare.
+
+Ägare: gå till **Inställningar → Återställ kollegas lösenord → Hämta användare**. Välj kollega och ange ditt eget nuvarande lösenord. **Skapa tillfälligt lösenord** ersätter kollegans gamla lösenord och visar ett slumpat lösenord. Lämna det privat till rätt person och dölj det sedan. Det kan inte hämtas igen; vid tappat svar görs en ny återställning. Återställning av det egna kontot via denna ruta tillåts inte.
 
 Kollegan loggar in med sitt vanliga nick och det tillfälliga lösenordet. Appen visar lösenordsbyte direkt och servern blockerar övriga API-åtgärder tills ett eget lösenord har valts. Ange det tillfälliga lösenordet som nuvarande lösenord och skriv det nya två gånger. Efter lyckat byte loggas användaren ut ur fliken och kan logga in med det nya lösenordet. Vanligt lösenordsbyte finns också under Inställningar.
 

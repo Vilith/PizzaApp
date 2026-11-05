@@ -1,4 +1,4 @@
-// Lösenords-API: eget lösenordsbyte och adminstyrd återställning.
+// Lösenords-API: eget lösenordsbyte och ägarstyrd återställning.
 
 using System.Net.Http.Headers;
 using System.Security.Claims;
@@ -22,14 +22,14 @@ public sealed class PasswordsController(PizzaDbContext db, ICurrentUser user,
     IOptions<SupabaseOptions> options, IHttpClientFactory clients) : ControllerBase
 {
     // LÄSNING: hämta data för klienten.
-    [HttpGet("accounts"), Authorize(Policy = "Admin")]
+    [HttpGet("accounts"), Authorize(Policy = "Owner")]
     public async Task<ActionResult<List<PasswordAccount>>> Accounts(CancellationToken ct)
         => await db.UserProfiles.AsNoTracking().Where(p => p.UserId != user.Id)
             .OrderBy(p => p.DisplayName)
             .Select(p => new PasswordAccount(p.UserId, p.DisplayName, p.LoginEmail)).ToListAsync(ct);
 
     // ÅTGÄRD: skapa data eller utför kommandot efter validering.
-    [HttpPost("reset"), Authorize(Policy = "Admin")]
+    [HttpPost("reset"), Authorize(Policy = "Owner")]
     public Task<IActionResult> Reset(ResetPasswordInput input, CancellationToken ct) => Handle(async () =>
     {
         if (input.UserId == Guid.Empty || input.UserId == user.Id)

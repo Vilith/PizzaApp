@@ -23,12 +23,40 @@ public class PasswordApiTests
     private static readonly Guid Admin = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid Member = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("invalid")]
+    [InlineData("00000000-0000-0000-0000-000000000000")]
+    public async Task Missing_or_invalid_owner_configuration_never_grants_reset_access(string ownerId)
+    {
+        using var app = new App(ownerId: ownerId); using var client = app.Client("admin");
+        Assert.False((await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.IsOwner);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/passwords/accounts")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/passwords/reset",
+            new ResetPasswordInput { UserId = Member, AdminPassword = "correct-password" })).StatusCode);
+        Assert.Equal(0, app.Provider.Updates);
+    }
+
+    [Fact]
+    public async Task Owner_flag_comes_from_configured_id_and_requires_admin_role()
+    {
+        using var app = new App(); using var owner = app.Client("admin"); using var admin = app.Client("other-admin");
+        Assert.True((await owner.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.IsOwner);
+        var other = (await admin.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!;
+        Assert.True(other.IsAdmin);
+        Assert.False(other.IsOwner);
+        using var memberApp = new App(ownerId: Member.ToString()); using var member = memberApp.Client("member");
+        Assert.False((await member.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.IsOwner);
+        Assert.Equal(HttpStatusCode.Forbidden, (await member.GetAsync("/api/passwords/accounts")).StatusCode);
+    }
     // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Theory]
     [InlineData(null, HttpStatusCode.Unauthorized)]
     [InlineData("member", HttpStatusCode.Forbidden)]
-    public async Task Reset_and_account_list_require_admin(string? token, HttpStatusCode expected)
+    [InlineData("other-admin", HttpStatusCode.Forbidden)]
+    [InlineData("forged-owner", HttpStatusCode.Forbidden)]
+    public async Task Reset_and_account_list_require_owner(string? token, HttpStatusCode expected)
     {
         using var app = new App(); using var client = app.Client(token);
         Assert.Equal(expected, (await client.GetAsync("/api/passwords/accounts")).StatusCode);
@@ -111,7 +139,7 @@ public class PasswordApiTests
 
     // TESTDUBBEL: isolerar testet från externa beroenden.
 
-    private sealed class App(bool missingKey = false) : WebApplicationFactory<Program>
+    private sealed class App(bool missingKey = false, string? ownerId = null) : WebApplicationFactory<Program>
     {
         private readonly SqliteConnection connection = new("Data Source=:memory:");
         public readonly Provider Provider = new();
@@ -129,6 +157,7 @@ public class PasswordApiTests
                 services.Configure<SupabaseOptions>(o => {
                     o.Url = "https://auth.example.test"; o.PublishableKey = "sb_publishable_test";
                     o.SecretKey = missingKey ? "" : "sb_secret_test";
+                    o.OwnerUserId = ownerId ?? Admin.ToString();
                 });
                 services.AddHttpClient("SupabaseVerification").ConfigurePrimaryHttpMessageHandler(() => Provider);
                 services.AddHttpClient("SupabasePasswords").ConfigurePrimaryHttpMessageHandler(() => Provider);
@@ -186,11 +215,13 @@ public class PasswordApiTests
                 return Json(new { id = Member });
             }
             var token = request.Headers.Authorization?.Parameter;
-            if (token is not ("admin" or "member")) return new(HttpStatusCode.Unauthorized);
-            return Json(new { id = token == "admin" ? Admin : Member,
+            if (token is not ("admin" or "member" or "other-admin" or "forged-owner")) return new(HttpStatusCode.Unauthorized);
+            var id = token == "admin" ? Admin : token == "other-admin" ? Guid.Parse("33333333-3333-3333-3333-333333333333") : Member;
+            return Json(new { id,
                 email = token + "@example.test", email_confirmed_at = "2026-01-01T00:00:00Z",
-                app_metadata = new { pizza_role = token, pizza_password_change_required = token == "member" && MustChange } });
-        }
-        private static HttpResponseMessage Json(object value) => new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
+                app_metadata = new { pizza_role = token is "admin" or "other-admin" ? "admin" : "member", pizza_owner = true,
+                    pizza_password_change_required = token == "member" && MustChange },
+                user_metadata = new { pizza_role = "owner", pizza_owner = true, IsOwner = true } });
+        }        private static HttpResponseMessage Json(object value) => new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
     }
 }

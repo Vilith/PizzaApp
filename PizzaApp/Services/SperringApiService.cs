@@ -7,8 +7,9 @@ namespace PizzaApp.Services;
 
 public interface ISperringApiService
 {
-    Task<SperringMenuImage?> GetWebsiteMenuImageAsync() => Task.FromResult<SperringMenuImage?>(null);
+    Task<SperringMenuImage?> GetMenuImageAsync() => Task.FromResult<SperringMenuImage?>(null);
     Task<SperringWebsiteMenu> GetWebsiteMenuAsync() => Task.FromResult(new SperringWebsiteMenu([]));
+    Task UploadMenuImageAsync(SperringMenuImageInput input) => throw new NotSupportedException();
     Task<SperringPage> GetAsync();
     Task SaveAsync(SperringMenu menu);
     Task SaveRegularAsync(SperringRegularInput input) => throw new NotSupportedException();
@@ -17,10 +18,15 @@ public interface ISperringApiService
 
 public class SperringApiService(HttpClient http) : ISperringApiService
 {
-    public async Task<SperringMenuImage?> GetWebsiteMenuImageAsync() =>
-        await http.GetFromJsonAsync<SperringMenuImage>("api/sperring/website-menu-image")
-        ?? throw new HttpRequestException("Menybilden kunde inte hämtas.");
+    public Task<SperringMenuImage?> GetMenuImageAsync() =>
+        http.GetFromJsonAsync<SperringMenuImage>("api/sperring/menu-image");
 
+    public async Task UploadMenuImageAsync(SperringMenuImageInput input)
+    {
+        using var response = await http.PutAsJsonAsync("api/sperring/menu-image", input);
+        if (!response.IsSuccessStatusCode)
+            throw new OrderApiException((await response.Content.ReadFromJsonAsync<Problem>())?.Detail ?? "Bilden kunde inte laddas upp.");
+    }
     public async Task<SperringWebsiteMenu> GetWebsiteMenuAsync() =>
         await http.GetFromJsonAsync<SperringWebsiteMenu>("api/sperring/website-menu")
         ?? throw new HttpRequestException("Originalmenyn kunde inte hämtas.");

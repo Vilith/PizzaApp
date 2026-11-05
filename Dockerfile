@@ -18,15 +18,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_HTTP_PORTS=10000
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 EXPOSE 10000
 COPY --from=build /app/publish .
-# 3. MENYBILD: publicerade Playwright-filer kan vara körbara enbart för ägaren.
-# Installationen körs som root, men driver och Chromium måste kunna köras av appanvändaren.
-RUN chmod -R a+rX /app/.playwright \
-    && dotnet PizzaApp.Api.dll --install-menu-browser \
-    && chmod -R a+rX /ms-playwright
 USER $APP_UID
-# Kontrollera med samma användare som kör servern: ett behörighetsfel stoppar nu bygget.
-RUN /app/.playwright/node/linux-x64/node --version
 ENTRYPOINT ["dotnet", "PizzaApp.Api.dll"]

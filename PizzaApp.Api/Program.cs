@@ -14,13 +14,6 @@ namespace PizzaApp.Api
     {
         public static void Main(string[] args)
         {
-            // BYGGMILJÖ: Docker installerar Chromium och dess systemberoenden före serverstart.
-            if (args is ["--install-menu-browser"])
-            {
-                Environment.ExitCode = Microsoft.Playwright.Program.Main(["install", "--with-deps", "--only-shell", "chromium"]);
-                return;
-            }
-
             var builder = WebApplication.CreateBuilder(args);
 
             // 1. TJÄNSTER: API, klocka, affärsregler och HTTP-klienter.
@@ -31,9 +24,6 @@ namespace PizzaApp.Api
             builder.Services.AddSingleton(TimeProvider.System);
             builder.Services.Configure<OrderingOptions>(builder.Configuration.GetSection("Ordering"));
             builder.Services.AddScoped<OrderService>();
-            builder.Services.Configure<SperringScreenshotOptions>(builder.Configuration.GetSection("SperringScreenshot"));
-            builder.Services.AddSingleton<ISperringScreenshotCapture, SperringScreenshotCapture>();
-            builder.Services.AddSingleton<SperringScreenshotService>();
             builder.Services.AddHttpClient<SperringWebsiteMenuService>(client =>
                 client.Timeout = TimeSpan.FromSeconds(15));
             builder.Services.AddScoped<StatisticsService>();

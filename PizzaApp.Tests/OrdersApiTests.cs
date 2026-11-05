@@ -20,6 +20,32 @@ namespace PizzaApp.Tests;
 public class OrdersApiTests
 {
 
+    [Fact]
+    public async Task Sperring_image_is_persistent_replaced_and_admin_only()
+    {
+        using var app = new TestApp(); using var client = app.CreateClient();
+        var api = new PizzaApp.Services.SperringApiService(client);
+        Assert.Null(await api.GetMenuImageAsync());
+        await api.UploadMenuImageAsync(new(TestProfileImage.Png));
+        Assert.Equal(TestProfileImage.Png, (await api.GetMenuImageAsync())!.DataUrl);
+        var next = "data:image/gif;base64," + Convert.ToBase64String("GIF89a"u8.ToArray());
+        await api.UploadMenuImageAsync(new(next));
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PizzaDbContext>();
+            Assert.Equal(next, (await db.SperringMenuImages.SingleAsync()).DataUrl);
+        }
+        foreach (var bad in new[] { "data:image/svg+xml,<svg/>", "data:image/png;base64,aGVsbG8=", new string('x', 14_000_000) })
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync("/api/sperring/menu-image", new SperringMenuImageInput(bad))).StatusCode);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "member");
+        Assert.Equal(next, (await api.GetMenuImageAsync())!.DataUrl);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync("/api/sperring/menu-image", new SperringMenuImageInput(TestProfileImage.Png))).StatusCode);
+        client.DefaultRequestHeaders.Authorization = null;
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/sperring/menu-image")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PutAsJsonAsync("/api/sperring/menu-image", new SperringMenuImageInput(TestProfileImage.Png))).StatusCode);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "admin");
+        Assert.Equal(next, (await api.GetMenuImageAsync())!.DataUrl);
+    }
     // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]

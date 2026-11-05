@@ -32,6 +32,7 @@ public class SperringUiTests : TestContext
         Assert.Equal(10, page.FindAll(".day-row").Count);
         Assert.DoesNotContain("Redigera meny", page.Markup);
         Assert.Empty(page.FindAll(".regular-editor"));
+        Assert.Empty(page.FindAll("input[type=file]"));
         Assert.Equal(5, page.FindAll(".day-tabs button").Count);
         Assert.Contains("Alias", page.Find(".order-head").TextContent);
         Assert.Contains("Lunchvän", page.Find(".person").TextContent);
@@ -139,13 +140,14 @@ public class SperringUiTests : TestContext
 
     // MENYBILD: PNG visas med originalets proportioner och texten finns som alternativ.
     [Fact]
-    public void Shows_screenshot_and_warns_when_last_refresh_failed()
+    public void Shows_uploaded_image_and_upload_control_for_admin()
     {
-        menus.Image = new(TestProfileImage.Png, DateTimeOffset.Parse("2026-10-30T12:00:00Z"), true);
+        menus.Image = new(TestProfileImage.Png, DateTimeOffset.Parse("2026-10-30T12:00:00Z"));
         var page = RenderComponent<SperringMenuPage>();
 
         Assert.Equal(TestProfileImage.Png, page.Find(".source-menu-image").GetAttribute("src"));
-        Assert.Contains("Kunde inte uppdatera bilden", page.Find(".source-menu-updated").TextContent);
+        Assert.Contains("Bild uppladdad", page.Find(".source-menu-updated").TextContent);
+        Assert.Single(page.FindAll("input[type=file]"));
         Assert.False(page.Find(".source-menu-text").HasAttribute("open"));
         Assert.NotEmpty(page.FindAll("button.dish"));
     }
@@ -157,17 +159,32 @@ public class SperringUiTests : TestContext
         var page = RenderComponent<SperringMenuPage>();
 
         Assert.Empty(page.FindAll(".source-menu-image"));
-        Assert.Contains("Menybilden kunde inte hämtas", page.Find(".source-menu").TextContent);
+        Assert.Contains("Menybilden kunde inte laddas", page.Find(".source-menu").TextContent);
         Assert.True(page.Find(".source-menu-text").HasAttribute("open"));
         Assert.NotEmpty(page.FindAll("button.dish"));
     }
 
+    [Fact]
+    public void Upload_replaces_image_and_failed_upload_keeps_previous_image()
+    {
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        menus.Image = new(TestProfileImage.Png, DateTimeOffset.UtcNow);
+        var page = RenderComponent<SperringMenuPage>();
+        var bytes = new byte[] { 255, 216, 255, 224, 0, 16 };
+        page.FindComponent<Microsoft.AspNetCore.Components.Forms.InputFile>().UploadFiles(InputFileContent.CreateFromBinary(bytes, "menu.jpg"));
+        var expected = "data:image/jpeg;base64," + Convert.ToBase64String(bytes);
+        page.WaitForAssertion(() => Assert.Equal(expected, page.Find(".source-menu-image").GetAttribute("src")));
+        page.FindComponent<Microsoft.AspNetCore.Components.Forms.InputFile>().UploadFiles(InputFileContent.CreateFromText("invalid", "fake.png"));
+        page.WaitForAssertion(() => Assert.Contains("Välj PNG", page.Find(".source-menu [role=alert]").TextContent));
+        Assert.Equal(expected, menus.Image!.DataUrl);
+    }
     // TESTDUBBEL: levererar menydata eller ett simulerat källfel.
     private class MenuApi : ISperringApiService
     {
         public SperringMenuImage? Image;
+        public Task UploadMenuImageAsync(SperringMenuImageInput input) { Image = new(input.DataUrl, DateTimeOffset.UtcNow); return Task.CompletedTask; }
         public bool ImageFails;
-        public Task<SperringMenuImage?> GetWebsiteMenuImageAsync() => ImageFails
+        public Task<SperringMenuImage?> GetMenuImageAsync() => ImageFails
             ? Task.FromException<SperringMenuImage?>(new HttpRequestException("Källan är nere"))
             : Task.FromResult(Image);
         public bool WebsiteFails;

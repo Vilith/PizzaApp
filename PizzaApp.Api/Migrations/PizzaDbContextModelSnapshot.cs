@@ -865,6 +865,26 @@ namespace PizzaApp.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("PizzaApp.Api.Models.SperringMenuImageRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DataUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SperringMenuImages");
+                });
+
             modelBuilder.Entity("PizzaApp.Api.Models.SperringWeek", b =>
                 {
                     b.Property<int>("Id")

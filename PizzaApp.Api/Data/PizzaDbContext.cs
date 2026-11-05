@@ -12,6 +12,7 @@ namespace PizzaApp.Api.Data
         { }
 
         // 1. TABELLER: beställningar, profiler, historik, restauranger och menyer.
+        public DbSet<SperringMenuImageRow> SperringMenuImages => Set<SperringMenuImageRow>();
         public DbSet<PizzaOrder> Orders => Set<PizzaOrder>();
         public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
         public DbSet<CompletedOrderDay> CompletedOrderDays => Set<CompletedOrderDay>();

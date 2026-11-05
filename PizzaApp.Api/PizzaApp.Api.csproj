@@ -10,13 +10,12 @@
 
   <!-- BEROENDEN OCH FILER: paket, projektreferenser eller delad källkod. -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.Playwright" Version="1.64.1" />
     <ProjectReference Include="../PizzaApp.Shared/PizzaApp.Shared.csproj" />
     <ProjectReference Include="../PizzaApp/PizzaApp.csproj" ReferenceOutputAssembly="false" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.12" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.14" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.14" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

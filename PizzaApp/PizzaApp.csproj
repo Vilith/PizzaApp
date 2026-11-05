@@ -8,8 +8,8 @@
   </PropertyGroup>
   <!-- BEROENDEN OCH FILER: paket, projektreferenser eller delad källkod. -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.14" />
     <ProjectReference Include="../PizzaApp.Shared/PizzaApp.Shared.csproj" />
   </ItemGroup>
 </Project>

@@ -12,34 +12,40 @@
         <h1 id="sperring-title">Veckans goda.</h1>
     </header>
 
-    @* Originalmenyn laddas från Sperrings hemsida. *@
+    @* Menybilden laddas upp av admin. *@
     <section class="source-menu" aria-label="Sperrings lunchmeny">
-        <p>Menyn visas från <a href="https://www.sperringsmat.se/lunch-meny" target="_blank" rel="noopener noreferrer">Sperrings hemsida – öppna i nytt fönster</a>.</p>
-        @* PNG-bilden behåller originalets utseende och följer sidans vanliga scrollning. *@
+        <p>Originalmenyn finns på <a href="https://www.sperringsmat.se/lunch-meny" target="_blank" rel="noopener noreferrer">Sperrings hemsida – öppna i nytt fönster</a>.</p>
+        @if (Auth.User?.IsAdmin == true)
+        {
+            <div class="menu-image-upload">
+                <label for="menu-image-file">Ladda upp menybild</label>
+                <InputFile id="menu-image-file" OnChange="UploadImage" accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.avif" disabled="@imageUploading" />
+                <p>PNG, JPEG, GIF, WebP, BMP eller AVIF. Högst 10 MB. En ny bild ersätter den tidigare.</p>
+            </div>
+        }
+        @if (imageUploading)
+        {
+            <p role="status">Laddar upp menybilden…</p>
+        }
         @if (websiteImage != null)
         {
-            <img class="source-menu-image" src="@websiteImage.DataUrl"
-                 alt="Skärmbild av Sperrings veckomenyer, sallader och återkommande rätter. Textversion finns nedan." />
-            <p class="source-menu-updated">
-                Bild hämtad @TimeZoneInfo.ConvertTimeBySystemTimeZoneId(websiteImage.CapturedAt, "Europe/Stockholm").ToString("d/M HH:mm")
-                · <a href="@websiteImage.DataUrl" download="sperrings-meny.png">Ladda ner PNG</a>
-                @if (websiteImage.IsStale)
-                {
-                    <span>· Kunde inte uppdatera bilden. Kontrollera gärna originalmenyn.</span>
-                }
-            </p>
+            <img class="source-menu-image" src="@websiteImage.DataUrl" alt="Uppladdad menybild för Sperring" />
+            <p class="source-menu-updated">Bild uppladdad @TimeZoneInfo.ConvertTimeBySystemTimeZoneId(websiteImage.UploadedAt, "Europe/Stockholm").ToString("d/M HH:mm")</p>
         }
         else if (imageLoading)
         {
-            <p role="status">Hämtar menybilden från Sperrings… Första hämtningen kan ta en stund.</p>
+            <p role="status">Laddar menybilden…</p>
         }
-        else if (imageError != null)
+        else if (imageError == null)
         {
-            <p class="source-menu-status" role="status">@imageError</p>
-            <button @onclick="LoadWebsiteImage">Försök hämta bilden igen</button>
+            <p class="source-menu-status">Ingen menybild har laddats upp ännu.</p>
         }
-
-        @* Textversionen finns kvar för skärmläsare och när skärmbilden inte går att hämta. *@
+        @if (imageError != null)
+        {
+            <p class="source-menu-status" role="alert">@imageError</p>
+            <button disabled="@imageUploading" @onclick="LoadWebsiteImage">Ladda om bilden</button>
+        }
+        @* Separat textmeny finns som alternativ till den uppladdade bilden. *@
         <details class="source-menu-text" open="@(websiteImage == null && !imageLoading)">
             <summary>@(websiteImage == null ? "Veckans meny" : "Visa menyn som text")</summary>
             @if (websiteLoading)
@@ -311,6 +317,7 @@
     private SperringWebsiteMenu? websiteMenu;
     private SperringMenuImage? websiteImage;
     private bool imageLoading = true;
+    private bool imageUploading;
     private string? imageError;
     private bool websiteLoading = true;
     private string? websiteError;
@@ -385,11 +392,11 @@
         imageError = null;
         try
         {
-            websiteImage = await Menus.GetWebsiteMenuImageAsync();
+            websiteImage = await Menus.GetMenuImageAsync();
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or AuthException)
         {
-            imageError = "Menybilden kunde inte hämtas. Du kan läsa textmenyn nedan eller öppna Sperrings hemsida.";
+            imageError = "Menybilden kunde inte laddas. Försök igen.";
         }
         finally
         {
@@ -397,6 +404,33 @@
         }
     }
 
+    private async Task UploadImage(InputFileChangeEventArgs args)
+    {
+        if (Auth.User?.IsAdmin != true || imageUploading) return;
+        imageUploading = true;
+        imageError = null;
+        try
+        {
+            var file = args.File;
+            if (file.Size is <= 0 or > SperringImageFiles.MaxBytes)
+                throw new InvalidDataException("Bilden får vara högst 10 MB.");
+            using var stream = file.OpenReadStream(SperringImageFiles.MaxBytes);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+            var bytes = buffer.ToArray();
+            var contentType = SperringImageFiles.DetectContentType(bytes);
+            if (contentType == null)
+                throw new InvalidDataException("Välj PNG, JPEG, GIF, WebP, BMP eller AVIF.");
+            var dataUrl = $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
+            await Menus.UploadMenuImageAsync(new(dataUrl));
+            await LoadWebsiteImage();
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or HttpRequestException or TaskCanceledException or OrderApiException or AuthException or System.Text.Json.JsonException)
+        {
+            imageError = ex is InvalidDataException or OrderApiException ? ex.Message : "Bilden kunde inte laddas upp. Försök igen.";
+        }
+        finally { imageUploading = false; }
+    }
     private async Task LoadWebsiteMenu()
     {
         websiteLoading = true;

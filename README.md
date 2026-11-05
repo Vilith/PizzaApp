@@ -22,25 +22,11 @@ Projektets egen källkod har sektionskommentarer på svenska. Små modellfiler h
 | Regressionstester och testdubblar | `PizzaApp.Tests/` |
 | Serverns tjänster och HTTP-pipeline | `PizzaApp.Api/Program.cs` |
 
-Sperrings originalmeny visas som en automatiskt skapad PNG-skärmbild av `https://www.sperringsmat.se/lunch-meny`. Playwright/Chromium öppnar originalet på servern och fotograferar menyområdet med veckor, sallader och pastarätter. Bilden behåller originalets utseende och har ingen iframe, fast höjd eller egen scrollruta. Den kan även laddas ner med **Ladda ner PNG**. En utfällbar textversion finns för tillgänglighet och som reserv om bilden inte går att hämta.
+Sperrings menybild laddas upp av en administratör. PNG, JPEG, GIF, WebP, BMP och AVIF stöds, högst 10 MB. Bilden sparas i databasen och visas för inloggade besökare. Nästa uppladdning ersätter den tidigare bilden utan bildarkiv. Filinnehåll och storlek kontrolleras i API:t, som kräver adminbehörighet. Textmenyn hämtas fortfarande separat från Sperrings hemsida.
 
-Första besöket skapar bilden. Alla besökare delar sedan samma bild i serverns minne. Första besöket efter sex timmar uppdaterar den automatiskt; intervallet styrs av `SperringScreenshot:RefreshMinutes` (miljövariabel `SperringScreenshot__RefreshMinutes`). Samtidiga besök startar bara en hämtning. Vid fel behålls senaste bilden, märks som äldre och ett nytt försök tillåts efter 15 minuter. Efter serveromstart behövs en ny hämtning. Serverns cache är alltså inte en permanent bildlagring.
+Kör databasens migrationer före publicering (`dotnet ef database update --project PizzaApp.Api`). Migrationen `SperringUploadedMenuImage` skapar bildlagringen. Playwright och Chromium behövs inte längre.
 
-I `SperringMenuPage.razor.css` styr sektion 1 dagsknapparnas textstorlek, padding och minsta höjd. Sektion 5 styr återkommande knappar och sektion 12 håller de två dagsvalen på samma rad. Sektion 14 har `--source-menu-image-width: 520px`, ungefär halv skala för menybilden. Ändra värdet för större eller mindre bild; höjden anpassas automatiskt och bilden ryms även på mobil. `--source-menu-font-size: 13.5px` styr den valfria textversionen.
-
-För lokal körning av PNG-hämtningen, bygg API-projektet och installera dess Chromium en gång (och igen efter byte av Playwright-version):
-
-```powershell
-dotnet build PizzaApp.Api
-pwsh PizzaApp.Api/bin/Debug/net10.0/playwright.ps1 install chromium --only-shell
-```
-
-Alternativt kan en redan installerad webbläsare användas med `SperringScreenshot__BrowserChannel=msedge`. Dockerfile installerar rätt Chromium och Linux-beroenden under bygget via `--install-menu-browser`; servern behöver därför byggas om vid denna ändring. Docker kan inte provköras i den lokala miljön. Se [Playwrights browserinstallation](https://playwright.dev/dotnet/docs/browsers) för plattformsdetaljer.
-
-Docker-bygget ger appanvändaren läs- och körrättigheter till Playwrights driver och Chromium. Efter bytet till appanvändaren kontrolleras att `/app/.playwright/node/linux-x64/node --version` fungerar. Ett behörighetsfel stoppar därmed bygget i stället för att först upptäckas vid menyhämtning. Om Render loggar `Permission denied` för den sökvägen behöver versionen med denna Dockerfile byggas och publiceras.
-
-Sperring-sidan har en ljus bakgrund bakom innehållet. Om PNG-bilden inte är tillgänglig visas textmenyn i läsbara kort för respektive vecka, sallader och pasta. Menykorten anpassar antalet kolumner efter skärmens bredd.
-
+I `SperringMenuPage.razor.css` styr `--source-menu-image-width` menybildens bredd. Höjden anpassas automatiskt och bilden ryms även på mobil.
 JSON-filer får inga kommentarer eftersom flera läsare kräver strikt JSON: `global.json` väljer SDK, `launchSettings.json` innehåller lokala startprofiler och `appsettings*.json` innehåller serverinställningar. Hemligheter hör hemma i User Secrets eller miljövariabler, se `AUTH_SETUP.md`. Projektfilerna (`.csproj`) och `Dockerfile` har egna kommentarer om bygginställningar och beroenden.
 
 ## Användarflöde

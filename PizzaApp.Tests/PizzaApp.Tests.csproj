@@ -13,11 +13,11 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
     <PackageReference Include="bunit" Version="1.40.0" />
     <!-- Keep bUnit's HTML parser on the patched version (GHSA-pgww-w46g-26qg). -->
     <PackageReference Include="AngleSharp" Version="1.5.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
     <ProjectReference Include="../PizzaApp.Api/PizzaApp.Api.csproj" />
     <Using Include="Xunit" />
     <Compile Include="../PizzaApp/Models/*.cs" Link="Models/%(Filename)%(Extension)" />

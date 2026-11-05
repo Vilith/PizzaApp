@@ -34,5 +34,6 @@ public record SperringWebsiteMenu(string[] Lines)
     public const string SourceUrl = "https://www.sperringsmat.se/lunch-meny";
 }
 
-// PNG-bild och hämtningstid. IsStale betyder att senaste uppdateringen misslyckades.
-public record SperringMenuImage(string DataUrl, DateTimeOffset CapturedAt, bool IsStale = false);
+// Gemensam uppladdad menybild och tidpunkt för uppladdningen.
+public record SperringMenuImage(string DataUrl, DateTimeOffset UploadedAt);
+public record SperringMenuImageInput(string DataUrl);

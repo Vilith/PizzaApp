@@ -15,24 +15,33 @@ namespace PizzaApp.Api.Controllers;
 [Route("api/sperring")]
 public class SperringController(PizzaDbContext db, TimeProvider clock) : ControllerBase
 {
-    // MENYBILD: separat från beställningarna, delas mellan besökare och uppdateras automatiskt.
-    [HttpGet("website-menu-image")]
+    // MENYBILD: adminbehörighet kontrolleras även för direkta API-anrop.
+    [HttpGet("menu-image")]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-    public async Task<ActionResult<SperringMenuImage>> GetWebsiteMenuImage(
-        [FromServices] PizzaApp.Api.Services.SperringScreenshotService source,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<SperringMenuImage?>> GetMenuImage()
     {
-        try
-        {
-            return await source.GetAsync(cancellationToken);
-        }
-        catch (Exception ex) when (ex is Microsoft.Playwright.PlaywrightException or HttpRequestException or InvalidDataException
-            or System.ComponentModel.Win32Exception)
-        {
-            return Problem(statusCode: 502, detail: "Menybilden kunde inte hämtas. Öppna originalmenyn eller försök igen senare.");
-        }
+        var image = await db.SperringMenuImages.AsNoTracking().SingleOrDefaultAsync(i => i.Id == 1);
+        return new JsonResult(image == null ? null : new SperringMenuImage(image.DataUrl, image.UploadedAt));
     }
 
+    [HttpPut("menu-image")]
+    [Authorize(Policy = "Admin")]
+    [RequestSizeLimit(15_000_000)]
+    public async Task<IActionResult> UploadMenuImage(SperringMenuImageInput input)
+    {
+        if (!SperringImageFiles.IsValid(input.DataUrl))
+            return Problem(statusCode: 400, detail: "Välj PNG, JPEG, GIF, WebP, BMP eller AVIF, högst 10 MB.");
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        // Låset skyddar också två samtidiga första uppladdningar.
+        await db.Restaurants.Where(r => r.Name == "Sperring").ExecuteUpdateAsync(s => s.SetProperty(r => r.Name, r => r.Name));
+        var image = await db.SperringMenuImages.SingleOrDefaultAsync(i => i.Id == 1);
+        if (image == null) { image = new SperringMenuImageRow { Id = 1 }; db.SperringMenuImages.Add(image); }
+        image.DataUrl = input.DataUrl;
+        image.UploadedAt = clock.GetUtcNow();
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return NoContent();
+    }
     // Originalmenyn hämtas separat så att ett fel hos Sperrings inte stoppar beställningarna.
     // LÄSNING: hämta data för klienten.
     [HttpGet("website-menu")]

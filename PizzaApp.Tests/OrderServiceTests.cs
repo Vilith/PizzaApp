@@ -60,6 +60,35 @@ public class OrderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Sperring_deadline_blocks_changes_but_allows_future_orders()
+    {
+        clock.Now = DateTimeOffset.Parse("2026-09-22T06:29:59Z");
+        var saved = await service.SaveAsync(2, new() { MenuItemId = 100 });
+        Assert.False((await service.GetTodayAsync(2)).IsLocked);
+        clock.Now = DateTimeOffset.Parse("2026-09-22T06:30:00Z");
+        Assert.Equal(409, (await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(2, new() { MenuItemId = 100 }))).StatusCode);
+        await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(2, new() { MenuItemId = 100, Revision = saved.Revision }, saved.Id));
+        await Assert.ThrowsAsync<OrderException>(() => service.DeleteAsync(2, saved.Id, saved.Revision));
+        Assert.Single((await service.GetTodayAsync(2)).Orders);
+        await service.SaveAsync(2, new() { MenuItemId = 100, DeliveryDate = new(2026, 9, 23) });
+        Assert.False((await service.GetDayAsync(2, new(2026, 9, 23))).IsLocked);
+    }
+
+    [Theory]
+    [InlineData("2026-09-22T06:29:59Z", false)]
+    [InlineData("2026-09-22T06:30:00Z", true)]
+    [InlineData("2026-01-22T07:29:59Z", false)]
+    [InlineData("2026-01-22T07:30:00Z", true)]
+    public async Task Sperring_deadline_is_0830_swedish_time(string now, bool passed)
+    {
+        clock.Now = DateTimeOffset.Parse(now);
+        var day = await service.GetTodayAsync(2);
+        Assert.Equal("08:30", day.Deadline);
+        Assert.Equal(passed, day.DeadlinePassed);
+        Assert.Equal(passed, day.IsLocked);
+    }
+
+    [Fact]
     public async Task Sperring_requires_employee_number_and_uses_profile_or_order_input()
     {
         var profile = await db.UserProfiles.SingleAsync(p => p.UserId == actor.Id);
@@ -258,7 +287,7 @@ public class OrderServiceTests : IDisposable
     {
         clock.Now = DateTimeOffset.Parse("2026-09-21T09:00:00Z");
         await service.SaveAsync(1, Pizza());
-        clock.Now = DateTimeOffset.Parse("2026-09-22T09:00:00Z");
+        clock.Now = DateTimeOffset.Parse("2026-09-22T06:00:00Z");
         await service.SaveAsync(1, Pizza(3));
         await service.SaveAsync(2, new() { MenuItemId = 100 });
         var pizzas = await service.GetTodayAsync(1);
@@ -308,7 +337,7 @@ public class OrderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Enabling_lock_blocks_all_pizza_mutations_at_deadline_but_not_other_restaurant()
+    public async Task Enabling_lock_blocks_all_pizza_mutations_at_deadline_but_allows_future_sperring_orders()
     {
         var saved = await service.SaveAsync(1, Pizza());
         settings.LockAfterDeadline = true;
@@ -318,7 +347,7 @@ public class OrderServiceTests : IDisposable
         await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(1, edit, saved.Id));
         await Assert.ThrowsAsync<OrderException>(() => service.DeleteAsync(1, saved.Id, saved.Revision));
         Assert.True((await service.GetTodayAsync(1)).IsLocked);
-        await service.SaveAsync(2, new() { MenuItemId = 100 });
+        await service.SaveAsync(2, new() { MenuItemId = 100, DeliveryDate = new(2026, 9, 23) });
     }
 
     [Fact]
@@ -465,7 +494,7 @@ public class OrderServiceTests : IDisposable
         Assert.All(day.Orders, o => Assert.True(o.CanCollect));
         var completed = await service.CompleteAsync(1, new(day.Date, day.Orders.ToDictionary(o => o.Id, o => o.Revision)));
         Assert.Single(completed.CollectedBy);
-        Assert.False((await service.GetTodayAsync(2)).IsLocked);
+        Assert.False((await service.GetDayAsync(2, completed.Date.AddDays(1))).IsLocked);
     }
 
     [Fact]
@@ -494,7 +523,7 @@ public class OrderServiceTests : IDisposable
 
     private sealed class TestClock : TimeProvider
     {
-        public DateTimeOffset Now { get; set; } = DateTimeOffset.Parse("2026-09-22T09:00:00Z");
+        public DateTimeOffset Now { get; set; } = DateTimeOffset.Parse("2026-09-22T06:00:00Z");
         public override DateTimeOffset GetUtcNow() => Now;
     }
 }

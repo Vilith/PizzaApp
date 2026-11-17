@@ -223,13 +223,13 @@ public class OrdersApiTests
         page = (await client.GetFromJsonAsync<SperringPage>("/api/sperring"))!;
         client.DefaultRequestHeaders.Authorization = new("Bearer", "member");
         var profile = (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!;
-        var missingNumber = new OrderInput { MenuItemId = page.Dishes.Single(d => d.Name == "Dagens rätt").Id };
+        var missingNumber = new OrderInput { MenuItemId = page.Dishes.Single(d => d.Name == "Dagens rätt").Id, DeliveryDate = new(2026, 9, 23) };
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/restaurants/2/orders", missingNumber)).StatusCode);
         (await client.PutAsJsonAsync("/api/auth/profile", new ProfileInput { DisplayName = "Lunchvän", EmployeeNumber = "00123", AvatarDataUrl = TestProfileImage.Png, Revision = profile.ProfileRevision })).EnsureSuccessStatusCode();
         Assert.Equal("00123", (await client.GetFromJsonAsync<SignedInUser>("/api/auth/me"))!.EmployeeNumber);
-        var input = new OrderInput { MenuItemId = page.Dishes.Single(d => d.Name == "Dagens rätt").Id };
+        var input = new OrderInput { MenuItemId = page.Dishes.Single(d => d.Name == "Dagens rätt").Id, DeliveryDate = new(2026, 9, 23) };
         (await client.PostAsJsonAsync("/api/restaurants/2/orders", input)).EnsureSuccessStatusCode();
-        var order = Assert.Single((await client.GetFromJsonAsync<DailyOrderList>("/api/restaurants/2/orders"))!.Orders);
+        var order = Assert.Single((await client.GetFromJsonAsync<DailyOrderList>("/api/restaurants/2/orders?date=2026-09-23"))!.Orders);
         Assert.Equal("Lunchvän", order.Name);
         Assert.Equal("00123", order.EmployeeNumber);
         Assert.Equal(TestProfileImage.Png, order.AvatarDataUrl);

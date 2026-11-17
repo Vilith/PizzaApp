@@ -32,6 +32,13 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             throw new OrderException(409, "Beställningarna är låsta efter kl. 11:15. Uppdatera listan.");
     }
 
+    private bool SperringDeadlinePassed(DateOnly date)
+    {
+        var local = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), Stockholm);
+        var today = DateOnly.FromDateTime(local.DateTime);
+        return date < today || date == today && TimeOnly.FromDateTime(local.DateTime) >= new TimeOnly(8, 30);
+    }
+
     // Dagslista: läs beställningar och status för önskat datum.
     public Task<DailyOrderList> GetTodayAsync(int restaurantId) => GetDayAsync(restaurantId);
 
@@ -61,8 +68,9 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             Date = date, IsPizzeria = restaurant.IsPizzeria,
             CollectedAt = completed?.CollectedAt,
             CollectedBy = completed == null ? [] : JsonSerializer.Deserialize<List<string>>(completed.CollectorsJson)!,
-            DeadlinePassed = restaurant.IsPizzeria && passed,
-            IsLocked = completed != null || restaurant.Name == "Sperring" && await IsSperringDayLockedAsync(date) || restaurant.IsPizzeria && passed && options.Value.LockAfterDeadline,
+            Deadline = restaurant.Name == "Sperring" ? "08:30" : "11:15",
+            DeadlinePassed = restaurant.Name == "Sperring" ? SperringDeadlinePassed(date) : restaurant.IsPizzeria && passed,
+            IsLocked = completed != null || restaurant.Name == "Sperring" && (SperringDeadlinePassed(date) || await IsSperringDayLockedAsync(date)) || restaurant.IsPizzeria && passed && options.Value.LockAfterDeadline,
             Orders = details,
             Summary = orders.GroupBy(o => new { o.MenuItemId, o.Pizza, o.Sauce, o.Drink, o.Comment })
                 .Select(g => new OrderSummary(g.Key.Pizza, g.Key.Sauce, g.Key.Drink, g.Key.Comment, g.Sum(o => o.Quantity)))
@@ -178,6 +186,8 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
 
     private async Task CheckSperringDayAsync(Restaurant restaurant, DateOnly date)
     {
+        if (restaurant.Name == "Sperring" && SperringDeadlinePassed(date))
+            throw new OrderException(409, "Sista beställningstid för Sperring är kl. 08:30. Beställningarna för detta datum är stängda.");
         if (restaurant.Name == "Sperring" && await IsSperringDayLockedAsync(date))
             throw new OrderException(409, "Ingen utkörning från Sperring detta datum. Dagen är låst av admin.");
     }

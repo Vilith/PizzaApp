@@ -10,6 +10,7 @@
     @* Sidhuvud. *@
     <header class="sperring-header">
         <h1 id="sperring-title">Sperrings</h1>
+        <p>Sista beställningstid är kl. 08:30 på leveransdagen. Du kan beställa i förväg till kommande öppna vardagar.</p>
     </header>
 
     @* Menybilden laddas upp av admin. *@
@@ -146,6 +147,10 @@
                     <div class="day-row @(isToday ? "today" : "")">
                         <div class="day-label">
                             <h3>@DayNames[i]</h3>
+                            @if (isToday && todayDeadlinePassed)
+                            {
+                                <p role="status">Beställningstiden har gått ut (08:30).</p>
+                            }
                             @if (isLocked)
                             {
                                 <p role="status">Låst – ingen utkörning</p>
@@ -176,7 +181,7 @@
                                         @foreach (var name in dishes)
                                         {
                                             var dish = page.Dishes.FirstOrDefault(d => d.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-                                            @if (date >= this.today && !isLocked && dish != null && !(date == daily.Date && daily.IsLocked))
+                                            @if (date >= this.today && !(isToday && todayLocked) && !isLocked && dish != null && !(date == daily.Date && daily.IsLocked))
                                             {
                                                 <button class="dish @(selected?.Id == dish.Id && selectedDate == date ? "selected" : "")" disabled="@busy" @onclick="() => Select(dish, date)">
                                                     @name
@@ -321,6 +326,7 @@
     private SperringDish? selected;
 
     private DateOnly today, selectedDate;
+    private bool todayLocked, todayDeadlinePassed;
 
     private int quantity = 1;
 
@@ -437,6 +443,8 @@
         var loaded = await Menus.GetAsync();
         var current = await Orders.GetTodayAsync(loaded.RestaurantId);
         today = current.Date;
+        todayLocked = current.IsLocked;
+        todayDeadlinePassed = current.DeadlinePassed;
         var date = daily?.Date ?? (today.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? CurrentMonday : today);
         var orders = date == today ? current : await Orders.GetDayAsync(loaded.RestaurantId, date);
         page = loaded;

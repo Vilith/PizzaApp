@@ -25,6 +25,18 @@ public class SperringUiTests : TestContext
     // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
 
     [Fact]
+    public void Deadline_hides_today_choices_even_when_viewing_another_days_orders()
+    {
+        orders.TodayLocked = true;
+        var page = RenderComponent<SperringMenuPage>();
+        Assert.Contains("08:30", page.Markup);
+        Assert.Empty(page.FindAll(".day-row").ToArray()[1].QuerySelectorAll("button.dish"));
+        Assert.NotEmpty(page.FindAll(".day-row").ToArray()[2].QuerySelectorAll("button.dish"));
+        page.FindAll(".day-tabs button").ToArray()[2].Click();
+        Assert.Empty(page.FindAll(".day-row").ToArray()[1].QuerySelectorAll("button.dish"));
+    }
+
+    [Fact]
     public void Employee_number_is_required_when_missing_from_settings()
     {
         auth.User = auth.User! with { EmployeeNumber = null };
@@ -228,15 +240,16 @@ public class SperringUiTests : TestContext
     // TESTDUBBEL: isolerar testet från externa beroenden.
     private class OrderApi : IOrderApiService
     {
+        public bool TodayLocked;
         public OrderInput? Saved;
         public Task<DailyOrderList> GetTodayAsync(int id) => Task.FromResult(new DailyOrderList
-        { Date = new(2026, 9, 22), Orders = [new() { Id = 1, Name = "Lunchvän", Pizza = "Pasta", AvatarDataUrl = TestProfileImage.Png }] });
+        { Date = new(2026, 9, 22), IsLocked = TodayLocked, DeadlinePassed = TodayLocked, Orders = [new() { Id = 1, Name = "Lunchvän", Pizza = "Pasta", AvatarDataUrl = TestProfileImage.Png }] });
 
         // Dagslista: läs beställningar och status för önskat datum.
         public async Task<DailyOrderList> GetDayAsync(int id, DateOnly date)
         {
             var day = await GetTodayAsync(id);
-            if (day.Date != date) { day.Date = date; day.Orders = []; }
+            if (day.Date != date) { day.Date = date; day.Orders = []; day.IsLocked = false; day.DeadlinePassed = false; }
             return day;
         }
         public Task<OrderDetails> SaveAsync(int id, OrderInput input, int? orderId = null)

@@ -5,6 +5,7 @@ namespace PizzaApp.Api.Models
     public class PizzaOrder
     {
         public Guid? OwnerUserId { get; set; }
+        public string? EmployeeNumber { get; set; }
         public decimal? UnitPrice { get; set; }
         public bool CanCollect { get; set; }
         public int Id { get; set; }

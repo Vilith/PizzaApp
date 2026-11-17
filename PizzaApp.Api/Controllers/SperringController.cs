@@ -104,7 +104,7 @@ public class SperringController(PizzaDbContext db, TimeProvider clock) : Control
         if (slot is < 1 or > 2 || input.Slot != slot || input.Year is < 2000 or > 2100
             || input.Week < 1 || input.Week > ISOWeek.GetWeeksInYear(input.Year)
             || input.RegularDishes == null || input.Days == null || input.Days.Length != 5
-            || input.Days.Any(d => d == null))
+            || input.Days.Any(d => d == null) || input.LockedDays == null || input.LockedDays.Length != 5)
             return Problem(statusCode: 400, detail: "Ange ett giltigt år, veckonummer och fem vardagar.");
         var texts = input.Days.Append(input.RegularDishes).ToArray();
         if (texts.Any(t => t.Length > 6000 || SperringMenu.Lines(t).Length > 30 || SperringMenu.Lines(t).Any(n => n.Length > 200)))

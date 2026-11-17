@@ -12,6 +12,7 @@ public class SperringMenu
     public int Week { get; set; }
     public string RegularDishes { get; set; } = "";
     public string[] Days { get; set; } = ["", "", "", "", ""];
+    public bool[] LockedDays { get; set; } = [false, false, false, false, true];
     public Guid Revision { get; set; }
     [System.Text.Json.Serialization.JsonIgnore]
     public DateOnly Monday => DateOnly.FromDateTime(ISOWeek.ToDateTime(Year, Week, DayOfWeek.Monday));

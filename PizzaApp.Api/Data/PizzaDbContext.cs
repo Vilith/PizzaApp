@@ -43,6 +43,8 @@ namespace PizzaApp.Api.Data
             modelBuilder.Entity<SperringWeek>().Property(w => w.Id).ValueGeneratedNever();
             modelBuilder.Entity<SperringWeek>().Property(w => w.Revision).IsConcurrencyToken();
             modelBuilder.Entity<UserProfile>().HasKey(p => p.UserId);
+            modelBuilder.Entity<UserProfile>().Property(p => p.EmployeeNumber).HasMaxLength(50);
+            modelBuilder.Entity<PizzaOrder>().Property(o => o.EmployeeNumber).HasMaxLength(50);
             modelBuilder.Entity<UserProfile>().Property(p => p.DisplayName).HasMaxLength(100);
             modelBuilder.Entity<UserProfile>().Property(p => p.AliasKey).HasMaxLength(100);
             modelBuilder.Entity<UserProfile>().HasIndex(p => p.AliasKey).IsUnique();

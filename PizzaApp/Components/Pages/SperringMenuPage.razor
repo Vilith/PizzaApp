@@ -138,12 +138,22 @@
 
                     // Datum och valbara rätter för den här vardagen.
                     var date = week.Monday.AddDays(i);
+                    var dayIndex = i;
+                    var isLocked = week.LockedDays[i];
                     var dailyDishes = SperringMenu.DailyChoices;
                     var regular = SperringMenu.Lines(week.RegularDishes).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
                     var isToday = date == today;
                     <div class="day-row @(isToday ? "today" : "")">
                         <div class="day-label">
                             <h3>@DayNames[i]</h3>
+                            @if (isLocked)
+                            {
+                                <p role="status">Låst – ingen utkörning</p>
+                            }
+                            @if (Auth.ShowAdminControls && date >= today)
+                            {
+                                <button class="day-lock" disabled="@(busy || editing != null)" aria-label="@(isLocked ? $"Öppna beställningar {date:yyyy-MM-dd}" : $"Lås beställningar {date:yyyy-MM-dd}")" @onclick="() => ToggleDay(week, dayIndex)">@(isLocked ? "Öppna dagen" : "Lås dagen")</button>
+                            }
                             <span>@date.ToString("d/M") @(isToday ? "· Idag" : "")</span>
                         </div>
 
@@ -166,7 +176,7 @@
                                         @foreach (var name in dishes)
                                         {
                                             var dish = page.Dishes.FirstOrDefault(d => d.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-                                            @if (date >= this.today && dish != null && !(date == daily.Date && daily.IsLocked))
+                                            @if (date >= this.today && !isLocked && dish != null && !(date == daily.Date && daily.IsLocked))
                                             {
                                                 <button class="dish @(selected?.Id == dish.Id && selectedDate == date ? "selected" : "")" disabled="@busy" @onclick="() => Select(dish, date)">
                                                     @name
@@ -193,6 +203,18 @@
             <section class="selection" id="sperring-selection" tabindex="-1" aria-label="Din beställning">
                 <h2>@selected.Name</h2>
                 <p>Lunch @selectedDate.ToString("d/M")</p>
+                @if (string.IsNullOrWhiteSpace(Auth.User?.EmployeeNumber))
+                {
+                    <label>
+                        Anställningsnummer (obligatoriskt)
+                        <input id="sperring-employee-number" maxlength="50" required @bind="employeeNumber" @bind:event="oninput" disabled="@busy" />
+                    </label>
+                    <p class="muted">Spara numret under Inställningar för att slippa fylla i det nästa gång.</p>
+                }
+                else
+                {
+                    <p>Anställningsnumret hämtas från dina inställningar.</p>
+                }
                 <label>
                     Antal
                     <input type="number" min="1" max="99" @bind="quantity" disabled="@busy" />
@@ -202,7 +224,7 @@
                     <input maxlength="500" @bind="comment" disabled="@busy" />
                 </label>
                 <div class="actions">
-                    <button class="primary" disabled="@busy" @onclick="PlaceOrder">@(busy ? "Sparar…" : "Beställ lunch")</button>
+                    <button class="primary" disabled="@(busy || string.IsNullOrWhiteSpace(Auth.User?.EmployeeNumber) && string.IsNullOrWhiteSpace(employeeNumber))" @onclick="PlaceOrder">@(busy ? "Sparar…" : "Beställ lunch")</button>
                     <button disabled="@busy" @onclick="() => selected = null">Avbryt</button>
                 </div>
             </section>
@@ -256,6 +278,10 @@
                     </div>
                     <div>
                         <strong>@order.Pizza</strong>
+                        @if (Auth.ShowAdminControls && !string.IsNullOrWhiteSpace(order.EmployeeNumber))
+                        {
+                            <small>Anställningsnummer: @order.EmployeeNumber</small>
+                        }
                         @if (order.Quantity > 1)
                         {
                             <span> × @order.Quantity</span>
@@ -299,6 +325,7 @@
     private int quantity = 1;
 
     private string? comment, error, message;
+    private string? employeeNumber;
 
     private bool busy, centerSelection;
 
@@ -434,8 +461,24 @@
         Week = week.Week,
         RegularDishes = week.RegularDishes,
         Days = [..week.Days],
+        LockedDays = [..week.LockedDays],
         Revision = week.Revision
     };
+
+    private Task ToggleDay(SperringMenu week, int day) => Run(async () =>
+    {
+        var copy = new SperringMenu
+        {
+            Slot = week.Slot, Year = week.Year, Week = week.Week,
+            RegularDishes = week.RegularDishes, Days = [..week.Days],
+            LockedDays = [..week.LockedDays], Revision = week.Revision
+        };
+        copy.LockedDays[day] = !copy.LockedDays[day];
+        await Menus.SaveAsync(copy);
+        selected = null;
+        await Load();
+        message = copy.LockedDays[day] ? "Dagen är låst för beställningar. Befintliga beställningar ligger kvar." : "Dagen är öppen för beställningar igen.";
+    });
 
     private Task SaveMenu() => Run(async () =>
     {
@@ -455,6 +498,7 @@
         selected = dish;
         quantity = 1;
         comment = null;
+        employeeNumber = null;
         message = null;
     }
 
@@ -463,6 +507,7 @@
         await Orders.SaveAsync(page!.RestaurantId, new OrderInput
         {
             DeliveryDate = selectedDate,
+            EmployeeNumber = employeeNumber?.Trim(),
             MenuItemId = selected!.Id,
             Quantity = quantity,
             Comment = comment

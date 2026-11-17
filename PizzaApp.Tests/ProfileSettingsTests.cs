@@ -49,10 +49,12 @@ public class ProfileSettingsTests : TestContext
         Assert.Equal("Anna", page.Find("#profile-name").GetAttribute("value"));
         Assert.NotEmpty(page.FindAll("img"));
         page.Find("#profile-name").Change("Pizzafan");
+        page.Find("#profile-employee-number").Change("00123");
         page.Find("[data-action='remove-photo']").Click();
         page.Find("form").Submit();
         page.WaitForAssertion(() => Assert.Equal("Pizzafan", auth.User!.DisplayName));
         Assert.Null(auth.User!.AvatarDataUrl);
+        Assert.Equal("00123", auth.User.EmployeeNumber);
         Assert.Contains("Din profil är sparad", page.Markup);
         Assert.Empty(page.FindAll("img"));
     }

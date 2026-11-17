@@ -15,6 +15,7 @@ public class SperringUiTests : TestContext
     private readonly OrderApi orders = new();
     public SperringUiTests()
     {
+        auth.User = auth.User! with { EmployeeNumber = "00123" };
         JSInterop.SetupVoid("pizzaPage.center", "sperring-selection").SetVoidResult();
         Services.AddSingleton<IAuthService>(auth);
         Services.AddSingleton<ISperringApiService>(menus);
@@ -22,6 +23,40 @@ public class SperringUiTests : TestContext
     }
 
     // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
+
+    [Fact]
+    public void Employee_number_is_required_when_missing_from_settings()
+    {
+        auth.User = auth.User! with { EmployeeNumber = null };
+        var page = RenderComponent<SperringMenuPage>();
+        page.FindAll(".day-row").ToArray()[1].QuerySelector("button.dish")!.Click();
+        Assert.True(page.Find(".selection .primary").HasAttribute("disabled"));
+        page.Find("#sperring-employee-number").Input("00042");
+        page.Find(".selection .primary").Click();
+        Assert.Equal("00042", orders.Saved!.EmployeeNumber);
+    }
+
+    [Fact]
+    public void Locked_day_has_no_order_buttons_and_members_have_no_lock_controls()
+    {
+        auth.User = auth.User! with { IsAdmin = false };
+        menus.Page.Menus[0].LockedDays[1] = true;
+        var page = RenderComponent<SperringMenuPage>();
+        var days = page.FindAll(".day-row").ToArray();
+        Assert.Contains("Låst – ingen utkörning", days[1].TextContent);
+        Assert.Empty(days[1].QuerySelectorAll("button.dish"));
+        Assert.NotEmpty(days[2].QuerySelectorAll("button.dish"));
+        Assert.Empty(page.FindAll(".day-lock"));
+    }
+
+    [Fact]
+    public void Admin_can_lock_an_individual_day()
+    {
+        var page = RenderComponent<SperringMenuPage>();
+        page.FindAll(".day-row").ToArray()[1].QuerySelector(".day-lock")!.Click();
+        Assert.True(menus.Saved!.LockedDays[1]);
+        Assert.False(menus.Saved.LockedDays[0]);
+    }
 
     [Fact]
     public void Member_sees_two_weeks_alias_avatar_and_can_choose_future_dishes()

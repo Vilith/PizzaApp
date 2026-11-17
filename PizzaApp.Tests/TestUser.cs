@@ -33,7 +33,7 @@ public sealed class FakeAuth : IAuthService
     // Profil: validera och spara användarens ändringar.
     public Task UpdateProfileAsync(ProfileInput input)
     {
-        User = User! with { DisplayName = input.DisplayName.Trim(), AvatarDataUrl = input.AvatarDataUrl, ProfileRevision = Guid.NewGuid() };
+        User = User! with { DisplayName = input.DisplayName.Trim(), EmployeeNumber = input.EmployeeNumber, AvatarDataUrl = input.AvatarDataUrl, ProfileRevision = Guid.NewGuid() };
         Changed?.Invoke(); return Task.CompletedTask;
     }
 

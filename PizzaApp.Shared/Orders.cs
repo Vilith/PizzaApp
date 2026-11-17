@@ -33,6 +33,9 @@ public static class MenuSauce
 // 3. INDATA: kundens val och valideringsregler för skapa/ändra.
 public class OrderInput
 {
+    [StringLength(50, ErrorMessage = "Anställningsnumret får innehålla högst 50 tecken.")]
+    [RegularExpression(@"[^\s\p{Cc}]+", ErrorMessage = "Ange ett anställningsnummer utan blanksteg eller radbrytningar.")]
+    public string? EmployeeNumber { get; set; }
     public DateOnly? DeliveryDate { get; set; }
     [Range(0, int.MaxValue)] public int MenuItemId { get; set; }
     public bool DrinkOnly { get; set; }

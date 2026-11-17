@@ -5,6 +5,7 @@ namespace PizzaApp.Api.Models;
 public class UserProfile
 {
     public Guid UserId { get; set; }
+    public string? EmployeeNumber { get; set; }
     public bool IsRegisteredMember { get; set; }
     public string DisplayName { get; set; } = "";
     public string AliasKey { get; set; } = "";

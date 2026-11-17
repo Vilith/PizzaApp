@@ -25,15 +25,76 @@ public class OrderServiceTests : IDisposable
         db = new(new DbContextOptionsBuilder<PizzaDbContext>().UseSqlite(connection).Options);
         db.Database.EnsureCreated();
         db.MenuItems.Add(new MenuItem { Id = 100, Name = "Dagens rätt", Price = 100, RestaurantId = 2 });
-        db.UserProfiles.Add(new() { UserId = actor.Id, DisplayName = "Anna", Revision = Guid.NewGuid() });
+        db.UserProfiles.Add(new() { UserId = actor.Id, DisplayName = "Anna", EmployeeNumber = "00123", Revision = Guid.NewGuid() });
         db.SperringWeeks.Add(new SperringWeek { Id = 1, Revision = Guid.NewGuid(),
             MenuJson = System.Text.Json.JsonSerializer.Serialize(new SperringMenu
-            { Slot = 1, Year = 2026, Week = 39, RegularDishes = "Dagens rätt\nOxfilé med potatis" }) });
+            { Slot = 1, Year = 2026, Week = 39, LockedDays = new bool[5], RegularDishes = "Dagens rätt\nOxfilé med potatis" }) });
         db.SaveChanges();
         service = new(db, clock, Options.Create(settings), actor);
     }
 
     // TESTFALL: beteende, behörighet och felvägar. Hjälpklasser finns efter testfallen.
+
+    [Fact]
+    public async Task Sperring_day_lock_blocks_changes_preserves_orders_and_can_be_reopened()
+    {
+        var date = new DateOnly(2026, 9, 25);
+        var saved = await service.SaveAsync(2, new() { MenuItemId = 100, DeliveryDate = date });
+        var controller = new PizzaApp.Api.Controllers.SperringController(db, clock);
+        var menu = (await controller.Get()).Value!.Menus.Single(m => m.Slot == 1);
+        menu.Revision = (await db.SperringWeeks.SingleAsync(w => w.Id == 1)).Revision;
+        menu.LockedDays[4] = true;
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NoContentResult>(await controller.Save(1, menu));
+        var locked = await service.GetDayAsync(2, date);
+        Assert.True(locked.IsLocked);
+        Assert.Single(locked.Orders);
+        Assert.Equal(409, (await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(2,
+            new() { MenuItemId = 100, DeliveryDate = date }))).StatusCode);
+        Assert.Equal(409, (await Assert.ThrowsAsync<OrderException>(() => service.DeleteAsync(2, saved.Id, saved.Revision))).StatusCode);
+        Assert.False((await service.GetDayAsync(2, date.AddDays(-1))).IsLocked);
+        await service.SaveAsync(2, new() { MenuItemId = 100, DeliveryDate = date.AddDays(-1) });
+        menu.LockedDays[4] = false;
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NoContentResult>(await controller.Save(1, menu));
+        Assert.False((await service.GetDayAsync(2, date)).IsLocked);
+        await service.SaveAsync(2, new() { MenuItemId = 100, DeliveryDate = date });
+    }
+
+    [Fact]
+    public async Task Sperring_requires_employee_number_and_uses_profile_or_order_input()
+    {
+        var profile = await db.UserProfiles.SingleAsync(p => p.UserId == actor.Id);
+        profile.EmployeeNumber = null;
+        await db.SaveChangesAsync();
+        var input = new OrderInput { MenuItemId = 100, DeliveryDate = new(2026, 9, 24) };
+        Assert.Equal(400, (await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(2, input))).StatusCode);
+        input.EmployeeNumber = "00042";
+        var manual = await service.SaveAsync(2, input);
+        Assert.Equal("00042", manual.EmployeeNumber);
+        Assert.Null(profile.EmployeeNumber);
+        profile.EmployeeNumber = "00123";
+        await db.SaveChangesAsync();
+        var automatic = await service.SaveAsync(2, input);
+        Assert.Equal("00123", automatic.EmployeeNumber);
+        profile.EmployeeNumber = "999";
+        await db.SaveChangesAsync();
+        Assert.Equal("00123", (await db.Orders.SingleAsync(o => o.Id == automatic.Id)).EmployeeNumber);
+    }
+
+    [Fact]
+    public async Task Friday_is_locked_by_default_and_admin_can_open_it()
+    {
+        var controller = new PizzaApp.Api.Controllers.SperringController(db, clock);
+        var menu = (await controller.Get()).Value!.Menus.Single(m => m.Slot == 2);
+        var friday = menu.Monday.AddDays(4);
+        Assert.True(menu.LockedDays[4]);
+        Assert.True((await service.GetDayAsync(2, friday)).IsLocked);
+        Assert.Equal(409, (await Assert.ThrowsAsync<OrderException>(() => service.SaveAsync(2,
+            new() { MenuItemId = 100, DeliveryDate = friday }))).StatusCode);
+        menu.LockedDays[4] = false;
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NoContentResult>(await controller.Save(2, menu));
+        Assert.False((await service.GetDayAsync(2, friday)).IsLocked);
+        await service.SaveAsync(2, new() { MenuItemId = 100, DeliveryDate = friday });
+    }
 
     [Fact]
     public async Task Sperring_future_orders_are_separate_and_can_be_deleted()

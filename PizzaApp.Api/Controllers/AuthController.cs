@@ -56,6 +56,7 @@ public class AuthController(IOptions<SupabaseOptions> options, ICurrentUser user
             db.UserProfiles.Add(profile);
         }
         profile.DisplayName = name;
+        profile.EmployeeNumber = string.IsNullOrWhiteSpace(input.EmployeeNumber) ? null : input.EmployeeNumber.Trim();
         profile.LoginEmail = User.FindFirstValue(ClaimTypes.Email);
         profile.AvatarDataUrl = input.AvatarDataUrl;
         profile.Revision = Guid.NewGuid();
@@ -67,5 +68,5 @@ public class AuthController(IOptions<SupabaseOptions> options, ICurrentUser user
 
     private SignedInUser Details(UserProfile? profile) => new(user.Id, User.FindFirstValue(ClaimTypes.Email) ?? "",
         user.IsAdmin, profile?.DisplayName ?? "", profile?.AvatarDataUrl, profile?.Revision ?? Guid.Empty,
-        User.HasClaim("pizza_password_change_required", "true"), User.HasClaim("pizza_owner", "true"));
+        User.HasClaim("pizza_password_change_required", "true"), User.HasClaim("pizza_owner", "true"), profile?.EmployeeNumber);
 }

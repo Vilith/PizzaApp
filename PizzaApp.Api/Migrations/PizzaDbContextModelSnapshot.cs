@@ -17,7 +17,7 @@ namespace PizzaApp.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -787,6 +787,10 @@ namespace PizzaApp.Api.Migrations
                     b.Property<string>("Drink")
                         .HasColumnType("text");
 
+                    b.Property<string>("EmployeeNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<int?>("MenuItemId")
                         .HasColumnType("integer");
 
@@ -922,6 +926,10 @@ namespace PizzaApp.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("EmployeeNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<bool>("IsRegisteredMember")
                         .HasColumnType("boolean");

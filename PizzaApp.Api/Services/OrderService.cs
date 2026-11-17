@@ -62,7 +62,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             CollectedAt = completed?.CollectedAt,
             CollectedBy = completed == null ? [] : JsonSerializer.Deserialize<List<string>>(completed.CollectorsJson)!,
             DeadlinePassed = restaurant.IsPizzeria && passed,
-            IsLocked = completed != null || restaurant.IsPizzeria && passed && options.Value.LockAfterDeadline,
+            IsLocked = completed != null || restaurant.Name == "Sperring" && await IsSperringDayLockedAsync(date) || restaurant.IsPizzeria && passed && options.Value.LockAfterDeadline,
             Orders = details,
             Summary = orders.GroupBy(o => new { o.MenuItemId, o.Pizza, o.Sauce, o.Drink, o.Comment })
                 .Select(g => new OrderSummary(g.Key.Pizza, g.Key.Sauce, g.Key.Drink, g.Key.Comment, g.Sum(o => o.Quantity)))
@@ -80,6 +80,7 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         if (date < today || (date != today && restaurant.Name != "Sperring"))
             throw new OrderException(400, "Välj dagens datum eller en kommande vardag på Sperringmenyn.");
         await CheckCompletedAsync(restaurantId, date);
+        await CheckSperringDayAsync(restaurant, date);
         CheckDeadline(restaurant, passed);
         var errors = new List<ValidationResult>();
         if (!Validator.TryValidateObject(input, new ValidationContext(input), errors, true))
@@ -99,6 +100,14 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         { OwnerUserId = user.Id, RestaurantId = restaurantId, OrderDate = date, CreatedAt = clock.GetUtcNow().UtcDateTime };
         if (restaurant.Name == "Sperring")
         {
+            var profile = await db.UserProfiles.AsNoTracking().SingleOrDefaultAsync(p => p.UserId == order.OwnerUserId);
+            var employeeNumber = id.HasValue
+                ? input.EmployeeNumber ?? order.EmployeeNumber ?? profile?.EmployeeNumber
+                : profile?.EmployeeNumber ?? input.EmployeeNumber;
+            employeeNumber = employeeNumber?.Trim();
+            if (string.IsNullOrWhiteSpace(employeeNumber) || employeeNumber.Length > 50 || employeeNumber.Any(c => char.IsWhiteSpace(c) || char.IsControl(c)))
+                throw new OrderException(400, "Ange ditt anställningsnummer för att beställa från Sperring, eller spara det under Inställningar.");
+            order.EmployeeNumber = employeeNumber;
             var weeks = await db.SperringWeeks.AsNoTracking().ToListAsync();
             var regular = weeks.SingleOrDefault(w => w.Id == 0);
             var regularDishes = regular == null ? null : JsonSerializer.Deserialize<SperringMenu>(regular.MenuJson)!.RegularDishes;
@@ -151,11 +160,26 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
             : today;
         if (date < today) throw new OrderException(409, "Tidigare dagars beställningar kan inte ändras.");
         await CheckCompletedAsync(restaurantId, date);
+        await CheckSperringDayAsync(restaurant, date);
         CheckDeadline(restaurant, passed);
         var order = await EditableAsync(restaurantId, id, date, revision);
         db.Orders.Remove(order);
         await PersistAsync();
         await transaction.CommitAsync();
+    }
+
+    private async Task<bool> IsSperringDayLockedAsync(DateOnly date)
+    {
+        var rows = await db.SperringWeeks.AsNoTracking().Where(w => w.Id == 1 || w.Id == 2).ToListAsync();
+        var menu = rows.Select(w => JsonSerializer.Deserialize<SperringMenu>(w.MenuJson)!)
+            .SingleOrDefault(m => date >= m.Monday && date <= m.Monday.AddDays(4));
+        return menu == null ? date.DayOfWeek == DayOfWeek.Friday : menu.LockedDays[date.DayNumber - menu.Monday.DayNumber];
+    }
+
+    private async Task CheckSperringDayAsync(Restaurant restaurant, DateOnly date)
+    {
+        if (restaurant.Name == "Sperring" && await IsSperringDayLockedAsync(date))
+            throw new OrderException(409, "Ingen utkörning från Sperring detta datum. Dagen är låst av admin.");
     }
 
     // All writers acquire the same database row lock, including completion. This also
@@ -255,8 +279,9 @@ public class OrderService(PizzaDbContext db, TimeProvider clock, IOptions<Orderi
         { throw new OrderException(409, "Någon har ändrat beställningen. Uppdatera listan innan du försöker igen."); }
     }
 
-    private static OrderDetails Details(PizzaOrder o) => new()
+    private OrderDetails Details(PizzaOrder o) => new()
     {
+        EmployeeNumber = user.IsAdmin || o.OwnerUserId == user.Id ? o.EmployeeNumber : null,
         Id = o.Id, RestaurantId = o.RestaurantId!.Value, MenuItemId = o.MenuItemId ?? 0,
         DrinkOnly = o.MenuItemId == null && o.Drink != null,
         OwnerUserId = o.OwnerUserId,

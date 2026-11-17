@@ -30,6 +30,9 @@ else
                 <label for="profile-name">Namn / nick / alias</label>
                 <InputText id="profile-name" class="form-control" maxlength="100" autocomplete="nickname" @bind-Value="input.DisplayName" />
                 <p class="hint">Tidigare beställningar behåller sitt ursprungliga namn.</p>
+                <label for="profile-employee-number">Anställningsnummer <span>(valfritt)</span></label>
+                <InputText id="profile-employee-number" class="form-control" maxlength="50" @bind-Value="input.EmployeeNumber" />
+                <p class="hint">Används automatiskt när du beställer från Sperring. Annars behöver du ange numret vid varje beställning.</p>
                 <label for="profile-photo">Profilbild <span>(valfritt)</span></label>
                 <div class="photo-preview">
 
@@ -84,6 +87,7 @@ else
     {
         loadedUser = Auth.User?.Id;
         input = new() { DisplayName = Auth.User?.DisplayName ?? "", AvatarDataUrl = Auth.User?.AvatarDataUrl,
+            EmployeeNumber = Auth.User?.EmployeeNumber,
             Revision = Auth.User?.ProfileRevision ?? Guid.Empty };
     }
     private void Changed() => _ = InvokeAsync(() =>

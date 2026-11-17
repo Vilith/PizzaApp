@@ -7,6 +7,9 @@ namespace PizzaApp.Shared;
 
 public class ProfileInput
 {
+    [StringLength(50, ErrorMessage = "Anställningsnumret får innehålla högst 50 tecken.")]
+    [RegularExpression(@"[^\s\p{Cc}]+", ErrorMessage = "Ange ett anställningsnummer utan blanksteg eller radbrytningar.")]
+    public string? EmployeeNumber { get; set; }
     [Required(ErrorMessage = "Ange ditt namn eller nick.")]
     [StringLength(100, ErrorMessage = "Namnet får innehålla högst 100 tecken.")]
     public string DisplayName { get; set; } = "";

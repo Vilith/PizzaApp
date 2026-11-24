@@ -3,11 +3,11 @@
    font-size  = textstorlek
    padding    = inre luft: höjdled och sidled
    min-height = minsta höjd
-   Bredden är hälften av raden och styrs i sektion 12. */
+   Bredden är en tredjedel av raden och styrs i sektion 12. */
 .sperring {
-    --daily-button-font-size: 1.1rem;
-    --daily-button-padding: 14px 16px;
-    --daily-button-min-height: 52px;
+    --daily-button-font-size: 1rem;
+    --daily-button-padding: 10px 12px;
+    --daily-button-min-height: 44px;
     max-width: 1080px;
     margin: 24px auto;
     padding: clamp(20px, 4vw, 40px);
@@ -362,7 +362,7 @@ small {
     min-width: 0;
 }
 
-/* 12. Dagsval: två lika breda kolumner håller Dagens rätt och Dagens sallad på samma rad. Storleken styrs av variablerna i sektion 1. */
+/* 12. Dagsval: tre lika breda kolumner visar lunchalternativen. Storleken styrs av variablerna i sektion 1. */
 .day-menu {
     min-width: 0;
 }
@@ -376,7 +376,7 @@ small {
 
 .daily-dishes .dishes {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .daily-dishes .dish {

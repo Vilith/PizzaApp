@@ -244,11 +244,17 @@
                 </div>
                 <button disabled="@busy" @onclick="Reload">Uppdatera</button>
             </div>
-            <p class="current-week">Vecka @System.Globalization.ISOWeek.GetWeekOfYear(today.ToDateTime(TimeOnly.MinValue))</p>
-            <div class="day-tabs" aria-label="Välj beställningsdag">
-                @foreach (var date in Enumerable.Range(0, 5).Select(i => CurrentMonday.AddDays(i)))
+            <div class="day-tabs week-tabs" aria-label="Välj beställningsvecka">
+                @foreach (var week in page.Menus.OrderBy(m => m.Monday))
                 {
-                    <button class="@(daily.Date == date ? "active" : "")" aria-pressed="@(daily.Date == date)" disabled="@busy" @onclick="() => ChangeDay(date)">@DayNames[(int)date.DayOfWeek - 1]</button>
+                    var active = daily.Date >= week.Monday && daily.Date <= week.Monday.AddDays(4);
+                    <button class="@(active ? "active" : "")" aria-pressed="@(active ? "true" : "false")" disabled="@busy" @onclick="() => ChangeDay(week.Monday)">Vecka @week.Week · @week.Year</button>
+                }
+            </div>
+            <div class="day-tabs" aria-label="Välj beställningsdag">
+                @foreach (var date in Enumerable.Range(0, 5).Select(i => OrdersMonday.AddDays(i)))
+                {
+                    <button class="@(daily.Date == date ? "active" : "")" aria-pressed="@(daily.Date == date ? "true" : "false")" disabled="@busy" @onclick="() => ChangeDay(date)">@DayNames[(int)date.DayOfWeek - 1]</button>
                 }
             </div>
             <p class="minimum @(daily.Orders.Count >= 5 ? "reached" : "")" role="status">
@@ -347,7 +353,7 @@
 
     private string? focusRow;
 
-    private DateOnly CurrentMonday => today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
+    private DateOnly OrdersMonday => daily!.Date.AddDays(-(((int)daily.Date.DayOfWeek + 6) % 7));
 
     // 3. Livscykel: ladda sidan och flytta fokus efter rendering.
 
@@ -445,7 +451,9 @@
         today = current.Date;
         todayLocked = current.IsLocked;
         todayDeadlinePassed = current.DeadlinePassed;
-        var date = daily?.Date ?? (today.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? CurrentMonday : today);
+        var date = daily?.Date ?? today;
+        if (!loaded.Menus.Any(m => date >= m.Monday && date <= m.Monday.AddDays(4)))
+            date = loaded.Menus.OrderBy(m => m.Monday).First().Monday;
         var orders = date == today ? current : await Orders.GetDayAsync(loaded.RestaurantId, date);
         page = loaded;
         daily = orders;

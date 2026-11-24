@@ -32,7 +32,7 @@ public class SperringUiTests : TestContext
         Assert.Contains("08:30", page.Markup);
         Assert.Empty(page.FindAll(".day-row").ToArray()[1].QuerySelectorAll("button.dish"));
         Assert.NotEmpty(page.FindAll(".day-row").ToArray()[2].QuerySelectorAll("button.dish"));
-        page.FindAll(".day-tabs button").ToArray()[2].Click();
+        page.FindAll(".day-tabs:not(.week-tabs) button").ToArray()[2].Click();
         Assert.Empty(page.FindAll(".day-row").ToArray()[1].QuerySelectorAll("button.dish"));
     }
 
@@ -80,17 +80,42 @@ public class SperringUiTests : TestContext
         Assert.DoesNotContain("Redigera meny", page.Markup);
         Assert.Empty(page.FindAll(".regular-editor"));
         Assert.Empty(page.FindAll("input[type=file]"));
-        Assert.Equal(5, page.FindAll(".day-tabs button").Count);
+        Assert.Equal(5, page.FindAll(".day-tabs:not(.week-tabs) button").Count);
         Assert.Contains("Alias", page.Find(".order-head").TextContent);
         Assert.Contains("Lunchvän", page.Find(".person").TextContent);
         Assert.Equal(TestProfileImage.Png, page.Find(".person img").GetAttribute("src"));
-        page.FindAll(".day-row").ToArray()[1].QuerySelectorAll("button.dish").Single(b => b.TextContent.Contains("Dagens rätt")).Click();
+        page.FindAll(".day-row").ToArray()[1].QuerySelectorAll("button.dish").Single(b => b.TextContent.Replace("＋", "").Trim() == "Dagens rätt").Click();
         page.Find(".selection .primary").Click();
         Assert.Equal(12, orders.Saved!.MenuItemId);
         Assert.Equal(new DateOnly(2026, 9, 22), orders.Saved.DeliveryDate);
         Assert.Contains("Din beställning är sparad.", page.Markup);
     }
 
+    [Fact]
+    public void Vegetarian_daily_choice_can_be_ordered()
+    {
+        var page = RenderComponent<SperringMenuPage>();
+        page.FindAll(".day-row").ToArray()[1].QuerySelectorAll("button.dish")
+            .Single(b => b.TextContent.Contains("Dagens rätt (Vegetarisk)")).Click();
+        page.Find(".selection .primary").Click();
+        Assert.Equal(16, orders.Saved!.MenuItemId);
+        Assert.Equal(new DateOnly(2026, 9, 22), orders.Saved.DeliveryDate);
+    }
+
+    [Fact]
+    public void Orders_can_be_viewed_for_both_weeks_and_refresh_keeps_selected_day()
+    {
+        var page = RenderComponent<SperringMenuPage>();
+        page.FindAll(".week-tabs button").ToArray()[1].Click();
+        Assert.Contains("2026-09-28", page.Find(".orders .eyebrow").TextContent);
+        Assert.Equal("true", page.FindAll(".week-tabs button").ToArray()[1].GetAttribute("aria-pressed"));
+        page.FindAll(".day-tabs:not(.week-tabs) button").ToArray()[4].Click();
+        Assert.Contains("2026-10-02", page.Find(".orders .eyebrow").TextContent);
+        page.Find(".orders .week-heading button").Click();
+        Assert.Contains("2026-10-02", page.Find(".orders .eyebrow").TextContent);
+        page.FindAll(".week-tabs button").ToArray()[0].Click();
+        Assert.Contains("2026-09-21", page.Find(".orders .eyebrow").TextContent);
+    }
     [Fact]
     public void Admin_edits_a_copy_and_cancel_preserves_published_menu()
     {
@@ -232,7 +257,7 @@ public class SperringUiTests : TestContext
         public SperringPage Page = new(2,
             [new() { Slot = 1, Year = 2026, Week = 39, RegularDishes = "Pasta", Days = ["", "Soppa", "Fisk", "", ""] },
              new() { Slot = 2, Year = 2026, Week = 40, RegularDishes = "Nästa vecka" }],
-            [new(11, "Pasta"), new(12, "Dagens rätt"), new(13, "Dagens sallad"), new(14, "Nästa vecka")]);
+            [new(11, "Pasta"), new(12, "Dagens rätt"), new(13, "Dagens sallad"), new(14, "Nästa vecka"), new(16, "Dagens rätt (Vegetarisk)")]);
         public Task<SperringPage> GetAsync() => Task.FromResult(Page);
         public Task SaveAsync(SperringMenu menu) { Saved = menu; return Task.CompletedTask; }
         public Task SaveRegularAsync(SperringRegularInput input) { SavedRegular = input; return Task.CompletedTask; }

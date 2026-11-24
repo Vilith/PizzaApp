@@ -6,7 +6,7 @@ namespace PizzaApp.Shared;
 
 public class SperringMenu
 {
-    public static readonly string[] DailyChoices = ["Dagens rätt", "Dagens sallad"];
+    public static readonly string[] DailyChoices = ["Dagens rätt", "Dagens rätt (Vegetarisk)", "Dagens sallad"];
     public int Slot { get; set; }
     public int Year { get; set; }
     public int Week { get; set; }
